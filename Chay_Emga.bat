@@ -7,21 +7,12 @@ if errorlevel 1 (
  pause
  exit /b 1
 )
-if not exist ".venv\Scripts\python.exe" (
- py -3 -m venv .venv
- if errorlevel 1 goto :failed
-)
-.venv\Scripts\python.exe -m pip install -r requirements.txt
+py -3 bootstrap.py
 if errorlevel 1 goto :failed
-set EMGA_HOST=0.0.0.0
-if not defined EMGA_PORT set EMGA_PORT=8765
-echo Mo trinh duyet tren may nay: http://127.0.0.1:%EMGA_PORT%
-echo May LAN dung http://DIA_CHI_IP_MAY_CHU:%EMGA_PORT%
-echo Chi mo Windows Firewall cho mang Private noi bo. Ctrl+C de dung.
-.venv\Scripts\python.exe app.py
-pause
 exit /b 0
 :failed
-echo Khoi dong that bai. Kiem tra Python va ket noi Internet khi cai thu vien.
+echo.
+echo Chua khoi dong duoc. Xem thong bao cu the phia tren.
+echo Neu pip/thu vien bi hong, dong cua so Emga cu va chay Sua_moi_truong.bat.
 pause
 exit /b 1

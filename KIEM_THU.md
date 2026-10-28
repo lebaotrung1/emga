@@ -30,3 +30,10 @@ Trước khi dùng chính thức: kiểm tra trên máy Windows của đơn vị
 - Trên tệp thật, trong thư mục tạm: đọc được 692 dòng còn mã và 70 dòng hết mã; nhập giữ đủ 762 hồ sơ. Trong nhóm đã nghỉ có 38 dòng thiếu mã nhân sự được giữ bằng mã lưu trữ. Báo cáo tự tổng hợp đang làm đếm 692 dòng, không đếm 70 dòng đã nghỉ. Nhập lại không tạo thêm hồ sơ. Có dòng trùng mã nhân sự nguồn nên chưa kết luận số cá nhân duy nhất; không tự gộp/xóa.
 - Kiểm thử Chromium: lọc người đã nghỉ ngay trên Excel nguồn; tải và đọc danh sách XLSX theo bộ lọc; lọc kết hợp nguồn/trạng thái/đơn vị; nhập hồ sơ theo mã cuối kỳ; lọc hồ sơ theo trạng thái/đơn vị/nhóm/trình độ/tuổi; chọn chỉ các hồ sơ đang lọc; cập nhật trạng thái từ nguồn cho hồ sơ đã nhập; kiểm tra báo cáo lịch sử 2 → 3 → 2 sau các mốc trạng thái. Không có lỗi JavaScript.
 - Giữ nguyên tệp nguồn, không phát tán dữ liệu nhân sự trong mã nguồn. Ngày chốt nguồn không được coi là ngày nghỉ thực tế; chưa suy diễn lịch sử trước ngày có dữ liệu. Chưa kiểm thử trực tiếp Windows.
+
+## Bản 0.3.1 — phục hồi pip và trình khởi động
+
+- 32 kiểm thử đều đạt, gồm bỏ qua pip khi thư viện đã sẵn sàng; phát hiện pip hỏng và tạo lại một lần; giữ môi trường cũ; khôi phục đường dẫn cũ nếu venv/ensurepip thất bại; báo lỗi cài gói mà không lặp vô hạn; chặn tạo lại nếu EMGA_DATA_DIR đặt trong .venv; kiểm tra phiên bản/import thật.
+- Chạy `bootstrap.py --check` trên môi trường ứng dụng hiện tại: thành công, không gọi pip hay tải lại thư viện.
+- Kiểm tra tích hợp trong thư mục tạm có dấu/khoảng trắng: tạo venv riêng, làm thiếu rich.themes để tái hiện lỗi pip, chạy prepare để giữ môi trường lỗi và tạo mới từ ensurepip, cài lại phụ thuộc chốt phiên bản, kiểm tra import và tệp dữ liệu mẫu không đổi.
+- Chưa chạy trực tiếp batch script hoặc kiểm chứng sửa lỗi trên chính máy Windows của người dùng. Không thay đổi luồng nghiệp vụ báo cáo/nhân sự trong bản này.

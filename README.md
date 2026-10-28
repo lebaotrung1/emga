@@ -1,6 +1,16 @@
-# Emga HR — bản chạy thử 0.3.0
+# Emga HR — bản chạy thử 0.3.1
 
 Ứng dụng nhân sự tiếng Việt cho Windows, sử dụng chung qua trình duyệt trong LAN. Bản 0.2 bổ sung **hồ sơ nhân sự, phân nhóm tự động, quyết định có ngày hiệu lực và báo cáo tự tổng hợp**. Chưa thay thế đầy đủ các mẫu báo cáo chính thức của đơn vị và chưa tính tiền lương. Mã nguồn không chứa tệp Excel hoặc dữ liệu nhân sự người dùng.
+
+## Sửa lỗi khởi động pip/rich ở 0.3.1
+
+Nếu cửa sổ dừng ở `ImportError: cannot import name 'themes' from 'pip._vendor.rich'`, lỗi nằm trong pip của thư mục `.venv`, trước khi ứng dụng mở. Bản 0.3.1 dùng `bootstrap.py` (thư viện chuẩn Python) để kiểm tra đúng phiên bản và khả năng import thư viện trước. Nếu thư viện đầy đủ, mở ứng dụng ngay, không gọi pip mỗi lần. Nếu pip hỏng/thiếu, giữ thư mục cũ thành `.venv-backup-...`, tạo môi trường mới bằng `venv/ensurepip` của Python đang cài, rồi cài các phiên bản đã chốt trong requirements. Không tắt TLS hay kiểm tra gói.
+
+**Cách dùng bản sửa:** đóng cửa sổ Emga cũ → giải nén bản mới → chạy `Chay_Emga.bat`. Nếu cần buộc tạo môi trường sạch, chạy `Sua_moi_truong.bat` trước rồi chạy lại ứng dụng. Lần cài/sửa cần Internet; các lần đã đủ thư viện không cần tải lại. Nếu lỗi tiếp diễn ngay trong `ensurepip` của môi trường mới, dùng Modify/Repair của bộ cài Python chính thức rồi chạy lại.
+
+**Cách xử lý với bản cũ khi chưa tải bản mới:** đóng Emga, đổi tên `.venv` trong thư mục ứng dụng thành `.venv_cu`, rồi chạy lại `Chay_Emga.bat`. Không đổi/xóa thư mục dữ liệu `%LOCALAPPDATA%\EmgaHR`. Dữ liệu mặc định và tài khoản nằm ngoài `.venv`, không bị xóa khi tạo lại thư viện. Nếu đã tự đặt `EMGA_DATA_DIR` bên trong `.venv`, bản sửa sẽ dừng và yêu cầu sao lưu/chuyển dữ liệu ra ngoài trước, không tự di chuyển môi trường đó.
+
+Đã kiểm tra đường dẫn có khoảng trắng và chữ có dấu trên Linux. Chưa chạy trực tiếp hai tệp `.bat` trên Windows; thông báo lỗi trên ảnh là bằng chứng sự cố tại máy người dùng, không phải kết quả thử Windows trong môi trường phát triển.
 
 ## Mới ở 0.3.0 — mã cuối kỳ và bộ lọc
 
@@ -14,7 +24,7 @@ Theo quy ước người dùng đã xác nhận: **còn mã cuối kỳ là đan
 
 Nếu báo cáo ra 0, khu vực báo cáo giải thích rõ: chưa chuyển Excel thành hồ sơ, kỳ trước ngày có dữ liệu, trạng thái chờ rà soát hoặc không còn ai đang làm. Dùng các nút hướng dẫn tại đó. Không đánh dấu tất cả là đang làm nếu mã cuối kỳ đã trống.
 
-Khi nâng cấp: sao lưu, dừng máy chủ cũ, giải nén/chạy bản mới và bấm Ctrl+F5. Góc trên phải phải hiện **0.3.0**. Dữ liệu/tài khoản cũ vẫn dùng cùng thư mục dữ liệu; trạng thái nguồn cập nhật theo bước có xem trước ở trên.
+Khi nâng cấp: sao lưu, dừng máy chủ cũ, giải nén/chạy bản mới và bấm Ctrl+F5. Góc trên phải phải hiện **0.3.1** ở bản mới nhất. Dữ liệu/tài khoản cũ vẫn dùng cùng thư mục dữ liệu; trạng thái nguồn cập nhật theo bước có xem trước ở trên.
 
 ## Cài mới trên Windows
 
