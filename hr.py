@@ -356,7 +356,20 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
             if baseline_dates and start<=max(baseline_dates):warnings.append('Kỳ báo cáo chạm hoặc trước ngày chốt nhập Excel. Không có đủ lịch sử trước ngày chốt; cần đối chiếu số đầu kỳ và tăng/giảm.')
             if review:warnings.append(str(len(review))+' hồ sơ cần rà soát chưa đưa vào tổng đang làm.')
             if any(r['warnings'] for r in active):warnings.append('Một số hồ sơ đang làm còn thiếu thông tin phân nhóm; xem cột Cần rà soát trong danh sách.')
-            return dict(start=start,end=end,scheme=scheme,total=len(active),female=sum(r['gender']=='female' for r in active),review_count=len(review),technical=sum(r['job']['technical'] for r in active),groups=counts(lambda r:GROUPS[r['job']['labor_group']]),education=counts(lambda r:EDUCATION[r['education']]),ages=counts(lambda r:r['age_group']),grades=dict(sorted(Counter(str(r['job']['grade'] or 'Chưa xác định') for r in active if r['job']['technical']).items())),units=[dict(unit=k,**v) for k,v in sorted(units.items())],people=rows,movements=moves,warnings=warnings)
+            first_effective=c.execute('SELECT MIN(effective) FROM hr_events').fetchone()[0]
+            source_count=c.execute('SELECT COUNT(*) FROM books').fetchone()[0]
+            if not people:
+                state='no_people';message='Chưa có hồ sơ quản lý để tổng hợp. '+('Đã có tệp Excel nguồn, nhưng chưa nhập thành hồ sơ nhân sự.' if source_count else 'Hãy nhập Excel nguồn rồi chuyển sang hồ sơ nhân sự, hoặc thêm hồ sơ mới.')
+            elif not rows:
+                state='before_records';message='Ngày cuối kỳ đang trước ngày hồ sơ bắt đầu có hiệu lực ('+str(first_effective)+'). Không có đủ dữ liệu để tính kỳ này.'
+            elif not active and review:
+                state='needs_review';message='Có '+str(len(review))+' hồ sơ chờ xác nhận tại ngày cuối kỳ; chưa hồ sơ nào được xác nhận đang làm. Báo cáo đang làm bằng 0, không phải số liệu nhân sự đã hoàn tất.'
+            elif not active:
+                state='no_active';message='Không có hồ sơ ở trạng thái đang làm tại ngày cuối kỳ đã chọn. Kiểm tra ngày hiệu lực và trạng thái trong hồ sơ nếu số 0 chưa đúng thực tế.'
+            else:
+                state='ready';message='Đã tổng hợp '+str(len(active))+' hồ sơ đang làm tại ngày '+end+'.'
+            readiness=dict(state=state,message=message,total_people=len(people),effective_people=len(rows),review_count=len(review),first_effective=first_effective,source_books=source_count)
+            return dict(start=start,end=end,scheme=scheme,readiness=readiness,total=len(active),female=sum(r['gender']=='female' for r in active),review_count=len(review),technical=sum(r['job']['technical'] for r in active),groups=counts(lambda r:GROUPS[r['job']['labor_group']]),education=counts(lambda r:EDUCATION[r['education']]),ages=counts(lambda r:r['age_group']),grades=dict(sorted(Counter(str(r['job']['grade'] or 'Chưa xác định') for r in active if r['job']['technical']).items())),units=[dict(unit=k,**v) for k,v in sorted(units.items())],people=rows,movements=moves,warnings=warnings)
     def report_args():
         start=read_date(request.args.get('start',today().replace(day=1).isoformat()));end=read_date(request.args.get('end',today().isoformat()));scheme=request.args.get('scheme','standard')
         if start>end or start<'1900-01-02' or scheme not in ('standard','primary'):fail('Kỳ báo cáo hoặc cách chia nhóm tuổi không hợp lệ.')
@@ -370,7 +383,8 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
     def report_export():
         with lock:d=build_report(*report_args())
         w=Workbook();s=w.active;s.title='Tổng hợp nội bộ'
-        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.2']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
+        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.2.1']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
+        s.append(['Tình trạng dữ liệu',d['readiness']['message']])
         for warning in d['warnings']:s.append(['Lưu ý',warning])
         for key,title in [('groups','Nhóm lao động'),('education','Trình độ'),('ages','Nhóm tuổi'),('grades','Bậc CNKT')]:
             s.append([]);s.append([title,'Số người'])

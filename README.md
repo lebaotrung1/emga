@@ -1,6 +1,14 @@
-# Emga HR — bản chạy thử 0.2
+# Emga HR — bản chạy thử 0.2.1
 
 Ứng dụng nhân sự tiếng Việt cho Windows, sử dụng chung qua trình duyệt trong LAN. Bản 0.2 bổ sung **hồ sơ nhân sự, phân nhóm tự động, quyết định có ngày hiệu lực và báo cáo tự tổng hợp**. Chưa thay thế đầy đủ các mẫu báo cáo chính thức của đơn vị và chưa tính tiền lương. Mã nguồn không chứa tệp Excel hoặc dữ liệu nhân sự người dùng.
+
+## Sửa trường hợp báo cáo ra toàn số 0 (0.2.1)
+
+Báo cáo mở ra sẽ tự tổng hợp kỳ đang chọn và hiển thị tình trạng dữ liệu: chưa chuyển Excel thành hồ sơ, hồ sơ còn chờ xác nhận, kỳ trước ngày hồ sơ có hiệu lực, hoặc thực sự không còn ai đang làm. Mỗi trường hợp có hướng dẫn/nút chuyển tới bước xử lý. Nếu API lỗi thì hiển thị lỗi tại khu vực báo cáo và ẩn kết quả cũ.
+
+Nếu đã nhập hồ sơ nhưng báo cáo vẫn 0: vào **Hồ sơ nhân sự**, xem đúng ngày, chọn những người đã rà soát, đặt trạng thái **Đang làm việc**, chọn ngày hiệu lực đúng với thực tế và bấm **Ghi nhận các hồ sơ đã chọn**. Sau đó mở lại **Báo cáo tự tổng hợp** với ngày cuối kỳ từ ngày hiệu lực trở đi. Không chọn tất cả là đang làm nếu chưa kiểm tra người đã nghỉ. Nếu mới tải Excel nguồn, dùng nút **Mở bước nhập hồ sơ từ Excel** để thực hiện bước chuyển thành hồ sơ trước.
+
+Khi nâng cấp, dừng máy chủ bản cũ, chạy bản mới rồi bấm Ctrl+F5 trên trình duyệt. Nhãn góc trên phải là **0.2.1**. Tệp JavaScript/CSS có mã phiên bản mới để tránh dùng nhầm bản lưu trong trình duyệt.
 
 ## Cài mới trên Windows
 

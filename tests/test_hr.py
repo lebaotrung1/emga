@@ -105,6 +105,21 @@ class PersonnelWorkflow(unittest.TestCase):
             self.assertEqual(client.post('/login',data=dict(csrf=token,name='admin',password='a long passphrase 123')).status_code,302)
             r=client.get('/api/hr/people?asof=2026-10-01');self.assertEqual(r.status_code,200);self.assertEqual(r.json[0]['id'],pid)
             self.assertEqual(r.json[0]['job']['labor_group'],'technology')
+    def test_report_explains_missing_data_review_and_wrong_period(self):
+        r=self.report('2026-01-01','2026-10-31')
+        self.assertEqual(r['readiness']['state'],'no_people');self.assertEqual(r['readiness']['source_books'],1)
+        self.assertIn('chưa nhập thành hồ sơ',r['readiness']['message'])
+        self.post('/api/hr/import/'+self.bid,dict(effective='2026-10-01',revision=0))
+        r=self.report('2026-07-01','2026-09-30')
+        self.assertEqual(r['readiness']['state'],'before_records');self.assertEqual(r['readiness']['first_effective'],'2026-10-01')
+        r=self.report('2026-10-01','2026-10-31')
+        self.assertEqual(r['readiness']['state'],'needs_review');self.assertEqual(r['readiness']['review_count'],1)
+        raw=self.client.get('/api/hr/reports/export?start=2026-10-01&end=2026-10-31').data
+        w=load_workbook(io.BytesIO(raw));values=[str(c.value or '') for row in w.worksheets[0] for c in row]
+        self.assertIn('Tình trạng dữ liệu',values);self.assertTrue(any('chờ xác nhận' in v for v in values))
+    def test_report_failure_is_not_a_valid_zero_report(self):
+        r=self.client.get('/api/hr/reports?start=2026-11-01&end=2026-10-01')
+        self.assertEqual(r.status_code,400);self.assertIn('error',r.json);self.assertNotIn('total',r.json)
     def test_viewer_cannot_mutate_hr(self):
         self.post('/api/users',dict(name='reader',password='reader password 123',role='viewer'))
         client=self.app.test_client();client.get('/login')

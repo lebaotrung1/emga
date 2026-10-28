@@ -23,14 +23,64 @@ $('#hr-rule-form').onsubmit=handle(async e=>{e.preventDefault();const d=Object.f
 if($('#hr-import-preview'))$('#hr-import-preview').onclick=handle(async()=>{if(!bid)throw Error('Vào Excel nguồn và nhập/chọn tệp trước.');const bookInfo=await(await api('/api/book/'+bid)).json();hrImportSource={id:bid,revision:bookInfo.revision};hrCandidates=await(await api('/api/hr/import/'+bid)).json();$('#hr-import-box').hidden=false;$('#hr-import-summary').textContent=bookInfo.name+': '+hrCandidates.filter(p=>p.eligible).length+' dòng có thể nhập; '+hrCandidates.filter(p=>!p.eligible).length+' dòng bỏ qua. Tất cả cần xác nhận trạng thái sau khi nhập.';hrTable('#hr-import-grid',['Dòng','Mã','Họ tên','Ngày sinh','Trình độ dự kiến','Chức danh','Đơn vị nguồn','Lưu ý'],hrCandidates.map(p=>[p.row,p.code,p.name,p.birth_date,hrOptions.education[p.education],p.title,p.unit,p.problems.join('; ')||'Cần rà soát thông tin / trạng thái']));});
 $('#hr-import-confirm').onclick=handle(async()=>{if(!hrImportSource)throw Error('Xem trước tệp cần nhập.');const r=await(await json('/api/hr/import/'+hrImportSource.id,{effective:$('#hr-baseline').value,revision:hrImportSource.revision})).json();$('#hr-import-box').hidden=true;await hrLoadJobs();await hrLoadPeople();notice('Đã nhập '+r.imported+' hồ sơ cần rà soát; bỏ qua '+r.skipped+' dòng trùng/thiếu mã.');});
 function hrReportParams(){return new URLSearchParams(new FormData($('#hr-report-form'))).toString();}
-async function hrReport(){const query=hrReportParams();const d=await(await api('/api/hr/reports?'+query)).json();hrReportQuery=query;$('#hr-report-result').hidden=false;$('#hr-report-total').textContent=d.total;$('#hr-report-female').textContent=d.female;$('#hr-report-technical').textContent=d.technical;$('#hr-report-warnings').replaceChildren(...d.warnings.map(w=>{const e=document.createElement('div');e.className='warning';e.textContent=w;return e;}));for(const key of ['groups','education','ages','grades'])hrTable('#hr-report-'+key,['Phân nhóm','Số người'],Object.entries(d[key]));hrTable('#hr-report-units',['Đơn vị','Đầu kỳ','Tăng / vào','Giảm / ra','Cuối kỳ'],d.units.map(u=>[u.unit,u.opening,u.increase,u.decrease,u.closing]));}
+let hrReportPending=null;
+function hrReportStatus(title,text,error=false){
+    $('#hr-report-status-title').textContent=title;
+    $('#hr-report-status-text').textContent=text;
+    $('#hr-report-status-counts').textContent='';
+    $('#hr-report-status-actions').replaceChildren();
+    $('#hr-report-status').classList.toggle('warning',error);
+}
+function hrReportReadiness(d){
+    const r=d.readiness;
+    hrReportStatus(r.state==='ready'?'Đã tính xong báo cáo':'Báo cáo cần kiểm tra dữ liệu',r.message,r.state!=='ready');
+    $('#hr-report-status-counts').textContent='Tổng hồ sơ đã nhập: '+r.total_people+' · Có hiệu lực đến cuối kỳ: '+r.effective_people+' · Đang làm: '+d.total+' · Chờ xác nhận: '+r.review_count;
+    const actions=$('#hr-report-status-actions');
+    if(r.state==='no_people'){
+        actions.append(hrButton(r.source_books?'Mở bước nhập hồ sơ từ Excel':'Mở Excel nguồn',()=>{
+            document.querySelector('[data-tab='+(r.source_books?'personnel':'work')+']').click();
+            if(r.source_books&&hrEdit)$('#hr-import-preview').click();
+        }));
+    }else if(r.state==='needs_review'||r.state==='no_active'){
+        actions.append(hrButton('Xem hồ sơ tại ngày cuối kỳ',async()=>{
+            $('#hr-asof').value=d.end;document.querySelector('[data-tab=personnel]').click();
+        }));
+    }else if(r.state==='before_records'&&r.first_effective){
+        actions.append(hrButton('Xem kỳ từ ngày có dữ liệu',async()=>{
+            const form=$('#hr-report-form');form.elements.start.value=r.first_effective;
+            if(form.elements.end.value<r.first_effective)form.elements.end.value=r.first_effective;
+            await hrReport();
+        }));
+    }
+}
+async function hrReport(){
+    if(hrReportPending)return hrReportPending;
+    const form=$('#hr-report-form');
+    if(!form.reportValidity())throw Error('Điền đủ ngày bắt đầu và kết thúc kỳ báo cáo.');
+    const buttons=[...form.querySelectorAll('button')];
+    buttons.forEach(b=>b.disabled=true);$('#hr-report-result').hidden=true;
+    hrReportStatus('Đang tổng hợp…','Đang kiểm tra hồ sơ và tính số liệu của kỳ đã chọn.');
+    hrReportPending=(async()=>{
+        try{
+            await hrReady;
+            const query=hrReportParams();const d=await(await api('/api/hr/reports?'+query)).json();hrReportQuery=query;
+            $('#hr-report-result').hidden=false;$('#hr-report-total').textContent=d.total;$('#hr-report-female').textContent=d.female;$('#hr-report-technical').textContent=d.technical;
+            $('#hr-report-warnings').replaceChildren(...d.warnings.map(w=>{const e=document.createElement('div');e.className='warning';e.textContent=w;return e;}));
+            for(const key of ['groups','education','ages','grades'])hrTable('#hr-report-'+key,['Phân nhóm','Số người'],Object.entries(d[key]));
+            hrTable('#hr-report-units',['Đơn vị','Đầu kỳ','Tăng / vào','Giảm / ra','Cuối kỳ'],d.units.map(u=>[u.unit,u.opening,u.increase,u.decrease,u.closing]));
+            hrReportReadiness(d);return d;
+        }catch(e){hrReportStatus('Chưa tính được báo cáo',e.message,true);throw e;}
+        finally{buttons.forEach(b=>b.disabled=false);hrReportPending=null;}
+    })();
+    return hrReportPending;
+}
 $('#hr-report-form').onsubmit=handle(async e=>{e.preventDefault();await hrReport();});
 $('#hr-report-export').onclick=handle(async()=>{await hrReport();await download(await api('/api/hr/reports/export?'+hrReportQuery),'Tong_hop_nhan_su.xlsx');notice('Đã xuất báo cáo tự tổng hợp và danh sách đối chiếu.');});
 $('#hr-decision-kind').onchange=()=>{$('#hr-new-job-label').hidden=$('#hr-decision-kind').value==='termination';};
 $('#hr-decision-form').onsubmit=handle(async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));const p=hrPeople.find(p=>p.id===d.person);if(!p)throw Error('Chọn nhân sự đã xác nhận đang làm.');d.version=p.version;const r=await(await json('/api/hr/decisions',d)).json();await download(await api('/api/hr/decisions/'+r.id+'/word'),'Quyet_dinh_du_thao.docx');await hrDecisions();notice('Đã lưu và xuất dự thảo; hồ sơ chưa đổi. Sau khi được duyệt, dùng nút Áp dụng trong danh sách quyết định.');});
 async function hrDecisions(){const list=await(await api('/api/hr/decisions')).json();hrTable('#hr-decisions-grid',['Số / Nhân sự','Loại','Ngày hiệu lực','Vị trí mới','Trạng thái','Thao tác'],list.map(d=>{const actions=document.createElement('div');actions.append(hrButton('Tải Word',async()=>download(await api('/api/hr/decisions/'+d.id+'/word'),'Quyet_dinh_du_thao.docx')));if(hrEdit&&!d.applied)actions.append(hrButton('Áp dụng quyết định đã duyệt',async()=>{if(!confirm('Ghi nhận quyết định '+d.fields.so_quyet_dinh+' đã được duyệt? Hồ sơ và phân nhóm sẽ thay đổi từ '+d.effective+'.'))return;await json('/api/hr/decisions/'+d.id+'/apply',{});await hrLoadPeople();await hrDecisions();notice('Đã ghi nhận quyết định. Hồ sơ và báo cáo tự cập nhật từ '+d.effective+'.');}));return[d.fields.so_quyet_dinh+' / '+d.fields.ho_ten,d.fields.loai_quyet_dinh,d.effective,d.fields.chuc_danh_moi+' / '+d.fields.don_vi_moi,d.applied?'Đã ghi nhận theo ngày hiệu lực':'Dự thảo — chưa áp dụng',actions];}));}
 $('#hr-decisions-refresh').onclick=handle(hrDecisions);
-window.hrActivate=async tab=>{await hrReady;if(['personnel','classification','hr-decisions'].includes(tab)){await hrLoadJobs();await hrLoadPeople();}if(tab==='hr-decisions')await hrDecisions();};
+window.hrActivate=async tab=>{await hrReady;if(['personnel','classification','hr-decisions'].includes(tab)){await hrLoadJobs();await hrLoadPeople();}if(tab==='hr-decisions')await hrDecisions();if(tab==='reports')await hrReport();};
 const hrReady=(async()=>{hrOptions=await(await api('/api/hr/options')).json();$('#hr-asof').value=hrOptions.today;$('#hr-baseline').value=hrOptions.today;for(const [id,key] of [['hr-education','education'],['hr-status','statuses'],['hr-group','groups']])hrSelect($('#'+id),Object.entries(hrOptions[key]));if(hrEdit){hrSelect($('#hr-batch-status'),Object.entries(hrOptions.statuses),'Giữ nguyên');hrSelect($('#hr-batch-education'),Object.entries(hrOptions.education),'Giữ nguyên');$('#hr-batch-form').elements.effective.value=hrOptions.today;}$('#hr-rule-form').elements.effective.value=hrOptions.today;$('#hr-decision-form').elements.effective.value=hrOptions.today;$('#hr-report-form').elements.start.value=hrOptions.today.slice(0,8)+'01';$('#hr-report-form').elements.end.value=hrOptions.today;await hrLoadJobs();await hrLoadPeople();})();hrReady.catch(e=>notice(e.message,true));
 
 if(hrEdit){
