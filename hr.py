@@ -436,7 +436,7 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
     def report_export():
         with lock:d=build_report(*report_args())
         w=Workbook();s=w.active;s.title='Tổng hợp nội bộ'
-        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.3.1']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
+        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.3.2']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
         s.append(['Tình trạng dữ liệu',d['readiness']['message']])
         for warning in d['warnings']:s.append(['Lưu ý',warning])
         for key,title in [('groups','Nhóm lao động'),('education','Trình độ'),('ages','Nhóm tuổi'),('grades','Bậc CNKT')]:

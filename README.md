@@ -1,12 +1,22 @@
-# Emga HR — bản chạy thử 0.3.1
+# Emga HR — bản chạy thử 0.3.2
 
 Ứng dụng nhân sự tiếng Việt cho Windows, sử dụng chung qua trình duyệt trong LAN. Bản 0.2 bổ sung **hồ sơ nhân sự, phân nhóm tự động, quyết định có ngày hiệu lực và báo cáo tự tổng hợp**. Chưa thay thế đầy đủ các mẫu báo cáo chính thức của đơn vị và chưa tính tiền lương. Mã nguồn không chứa tệp Excel hoặc dữ liệu nhân sự người dùng.
+
+## Khởi động Windows và chẩn đoán đầy đủ — 0.3.2
+
+Python 3.12.5 được hỗ trợ. Thông báo “pip trong môi trường vừa tạo vẫn bị lỗi” chưa xác định được nguyên nhân; cần đọc lỗi gốc, không mặc định yêu cầu cài lại Python.
+
+Bản 0.3.2 dùng thư mục thư viện ngắn riêng trên Windows: `%LOCALAPPDATA%\EmgaRuntime\py<phiên bản>-<kiến trúc>-<mã phụ thuộc>`. Không dùng `.venv` nằm sâu trong thư mục ZIP giải nén nhiều cấp nữa, không xóa `.venv` cũ và không di chuyển dữ liệu `%LOCALAPPDATA%\EmgaHR`. Các lần tải bản ứng dụng có cùng phiên bản Python/kiến trúc/phụ thuộc dùng chung bộ thư viện đã kiểm tra. Nếu cần chọn nơi khác, đặt `EMGA_RUNTIME_DIR` thành một đường dẫn tuyệt đối; đây là thư mục thư viện, khác `EMGA_DATA_DIR` chứa dữ liệu.
+
+Đóng ứng dụng cũ, giải nén bản mới và chạy **Chay_Emga.bat** trước. Nếu không khởi động được, chạy **Chan_doan.bat** và gửi nội dung **emga-khoi-dong.log** cùng thư mục. Chẩn đoán không cài gói, không đọc cơ sở dữ liệu, không dump biến môi trường hay đọc tệp bí mật. Log có phiên bản Python, đường dẫn trên máy, kết quả pip/ensurepip và lỗi gốc. Log được nối thêm theo từng lần chạy, không ghi đè lỗi trước đó. Không tự gửi log ra mạng. Người dùng kiểm tra nội dung trước khi chia sẻ.
+
+Đường dẫn ngắn là biện pháp tránh một nhóm lỗi Windows, **chưa chứng minh đường dẫn dài là nguyên nhân tại máy người dùng**. Bản này chưa được chạy trực tiếp trên Windows; cần kết quả chẩn đoán của máy đó nếu vẫn lỗi. Không tắt antivirus, TLS, kiểm tra gói hay yêu cầu chạy quản trị viên để bỏ qua lỗi.
 
 ## Sửa lỗi khởi động pip/rich ở 0.3.1
 
 Nếu cửa sổ dừng ở `ImportError: cannot import name 'themes' from 'pip._vendor.rich'`, lỗi nằm trong pip của thư mục `.venv`, trước khi ứng dụng mở. Bản 0.3.1 dùng `bootstrap.py` (thư viện chuẩn Python) để kiểm tra đúng phiên bản và khả năng import thư viện trước. Nếu thư viện đầy đủ, mở ứng dụng ngay, không gọi pip mỗi lần. Nếu pip hỏng/thiếu, giữ thư mục cũ thành `.venv-backup-...`, tạo môi trường mới bằng `venv/ensurepip` của Python đang cài, rồi cài các phiên bản đã chốt trong requirements. Không tắt TLS hay kiểm tra gói.
 
-**Cách dùng bản sửa:** đóng cửa sổ Emga cũ → giải nén bản mới → chạy `Chay_Emga.bat`. Nếu cần buộc tạo môi trường sạch, chạy `Sua_moi_truong.bat` trước rồi chạy lại ứng dụng. Lần cài/sửa cần Internet; các lần đã đủ thư viện không cần tải lại. Nếu lỗi tiếp diễn ngay trong `ensurepip` của môi trường mới, dùng Modify/Repair của bộ cài Python chính thức rồi chạy lại.
+**Cách dùng bản sửa:** đóng cửa sổ Emga cũ → giải nén bản mới → chạy `Chay_Emga.bat`. Nếu cần buộc tạo môi trường sạch, chạy `Sua_moi_truong.bat` trước rồi chạy lại ứng dụng. Lần cài/sửa cần Internet; các lần đã đủ thư viện không cần tải lại. Nếu lỗi tiếp diễn trong môi trường mới, dùng chức năng chẩn đoán 0.3.2 để đọc lỗi gốc trước khi quyết định sửa Python.
 
 **Cách xử lý với bản cũ khi chưa tải bản mới:** đóng Emga, đổi tên `.venv` trong thư mục ứng dụng thành `.venv_cu`, rồi chạy lại `Chay_Emga.bat`. Không đổi/xóa thư mục dữ liệu `%LOCALAPPDATA%\EmgaHR`. Dữ liệu mặc định và tài khoản nằm ngoài `.venv`, không bị xóa khi tạo lại thư viện. Nếu đã tự đặt `EMGA_DATA_DIR` bên trong `.venv`, bản sửa sẽ dừng và yêu cầu sao lưu/chuyển dữ liệu ra ngoài trước, không tự di chuyển môi trường đó.
 
@@ -24,7 +34,7 @@ Theo quy ước người dùng đã xác nhận: **còn mã cuối kỳ là đan
 
 Nếu báo cáo ra 0, khu vực báo cáo giải thích rõ: chưa chuyển Excel thành hồ sơ, kỳ trước ngày có dữ liệu, trạng thái chờ rà soát hoặc không còn ai đang làm. Dùng các nút hướng dẫn tại đó. Không đánh dấu tất cả là đang làm nếu mã cuối kỳ đã trống.
 
-Khi nâng cấp: sao lưu, dừng máy chủ cũ, giải nén/chạy bản mới và bấm Ctrl+F5. Góc trên phải phải hiện **0.3.1** ở bản mới nhất. Dữ liệu/tài khoản cũ vẫn dùng cùng thư mục dữ liệu; trạng thái nguồn cập nhật theo bước có xem trước ở trên.
+Khi nâng cấp: sao lưu, dừng máy chủ cũ, giải nén/chạy bản mới và bấm Ctrl+F5. Góc trên phải phải hiện **0.3.2** ở bản mới nhất. Dữ liệu/tài khoản cũ vẫn dùng cùng thư mục dữ liệu; trạng thái nguồn cập nhật theo bước có xem trước ở trên.
 
 ## Cài mới trên Windows
 

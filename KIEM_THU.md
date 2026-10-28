@@ -37,3 +37,10 @@ Trước khi dùng chính thức: kiểm tra trên máy Windows của đơn vị
 - Chạy `bootstrap.py --check` trên môi trường ứng dụng hiện tại: thành công, không gọi pip hay tải lại thư viện.
 - Kiểm tra tích hợp trong thư mục tạm có dấu/khoảng trắng: tạo venv riêng, làm thiếu rich.themes để tái hiện lỗi pip, chạy prepare để giữ môi trường lỗi và tạo mới từ ensurepip, cài lại phụ thuộc chốt phiên bản, kiểm tra import và tệp dữ liệu mẫu không đổi.
 - Chưa chạy trực tiếp batch script hoặc kiểm chứng sửa lỗi trên chính máy Windows của người dùng. Không thay đổi luồng nghiệp vụ báo cáo/nhân sự trong bản này.
+
+## Bản 0.3.2 — lỗi gốc và vị trí thư viện Windows ngắn
+
+- Kiểm thử bổ sung: lỗi pip được hiện trên console và ghi log; lựa chọn cache Windows ngắn, ổn định qua các thư mục giải nén và tách cache khi phụ thuộc đổi; chế độ chẩn đoán không cài/sửa môi trường; kiểm tra cả môi trường cache tạo thất bại gần nhất.
+- Giữ kết quả thử trước là bằng chứng Linux, không coi là xác nhận đã sửa được máy Windows của người dùng. Python người dùng báo 3.12.5 nằm trong dải được hỗ trợ; chưa có lỗi gốc để kết luận Python cài hỏng hoặc đường dẫn dài là nguyên nhân.
+- Không đổi dữ liệu/tài khoản, không tự gửi log đi. Nhật ký chẩn đoán không đưa vào Git.
+- 37 kiểm thử đều đạt. Chạy tích hợp thật trên Linux với bố trí cache ngắn giống quyết định đường dẫn Windows: cài/import đủ thư viện ngoài thư mục giải nén dài/có dấu, thư mục giải nén thứ hai dùng lại cache mà không chạy pip, tệp dữ liệu mẫu không thay đổi. Kiểm thử log chạy chẩn đoán nhiều lần giữ lỗi trước đó. Đây là kiểm tra logic/bố trí trên Linux, không phải chứng nhận hoạt động trên Windows.

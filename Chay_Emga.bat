@@ -12,7 +12,7 @@ if errorlevel 1 goto :failed
 exit /b 0
 :failed
 echo.
-echo Chua khoi dong duoc. Xem thong bao cu the phia tren.
+echo Chua khoi dong duoc. Xem thong bao cu the phia tren va tep emga-khoi-dong.log.
 echo Neu pip/thu vien bi hong, dong cua so Emga cu va chay Sua_moi_truong.bat.
 pause
 exit /b 1

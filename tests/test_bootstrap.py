@@ -41,6 +41,45 @@ class Bootstrap(unittest.TestCase):
     def test_force_repair_rebuilds_even_when_dependencies_present(self):
         with patch.object(bootstrap,'rebuild_environment') as rebuild,patch.object(bootstrap,'dependencies_ok',return_value=True),patch.object(bootstrap.subprocess,'run',return_value=Mock(returncode=0)):
             bootstrap.prepare(self.root,repair=True);rebuild.assert_called_once_with(self.env)
+    def test_probe_failure_is_visible_and_saved(self):
+        import io
+        from contextlib import redirect_stdout
+        log=self.root/'diagnostic.log';screen=io.StringIO()
+        result=Mock(returncode=1,stdout="ImportError: cannot import name 'themes' from 'pip._vendor.rich'\n")
+        with patch.object(bootstrap,'DIAGNOSTIC_LOG',log),patch.object(bootstrap.subprocess,'run',return_value=result),redirect_stdout(screen):
+            self.assertFalse(bootstrap.pip_ok(self.python,report=True))
+        self.assertIn('themes',screen.getvalue());self.assertIn('themes',log.read_text(encoding='utf-8'))
+        self.assertIn('Ma thoat: 1',screen.getvalue())
+    def test_windows_environment_is_short_and_reused_across_extractions(self):
+        deep=self.root/('thu muc có dấu '+('a'*90))/('b'*90);deep.mkdir(parents=True)
+        (deep/'requirements.txt').write_bytes((self.root/'requirements.txt').read_bytes())
+        with patch.dict(os.environ,{'LOCALAPPDATA':str(self.root/'local')},clear=True):
+            short=bootstrap.choose_environment(deep,windows=True)
+            self.assertEqual(short,bootstrap.choose_environment(self.root,windows=True))
+            self.assertTrue(str(short).startswith(str(self.root/'local'/'EmgaRuntime')))
+            self.assertLess(len(str(short)),len(str(deep)))
+            (deep/'requirements.txt').write_text('Flask==3.1.2\n')
+            self.assertNotEqual(short,bootstrap.choose_environment(deep,windows=True))
+    def test_diagnostics_do_not_install_or_change_environment(self):
+        with patch.object(bootstrap,'run_probe',return_value=True) as probe,patch.object(bootstrap,'prepare') as prepare,patch.object(bootstrap,'rebuild_environment') as rebuild:
+            bootstrap.diagnose(self.root);self.assertGreaterEqual(probe.call_count,2);prepare.assert_not_called();rebuild.assert_not_called()
+        self.assertEqual(self.python.read_text(),'old interpreter')
+        self.assertEqual((self.data/'hr.sqlite').read_bytes(),b'preserve personnel')
+    def test_diagnostics_include_last_failed_short_environment(self):
+        selected=self.root/'short-cache'/'runtime';failed=selected.with_name(selected.name+'-failed-20261028')
+        python=bootstrap.env_python(failed);python.parent.mkdir(parents=True);python.write_text('failed runtime')
+        with patch.object(bootstrap,'choose_environment',return_value=selected),patch.object(bootstrap,'run_probe',return_value=True) as probe:
+            bootstrap.diagnose(self.root)
+            self.assertTrue(any(str(python) in call.args[0] for call in probe.call_args_list))
+    def test_diagnostic_runs_append_instead_of_erasing_previous_error(self):
+        import io
+        from contextlib import redirect_stdout
+        def write_marker(root):bootstrap.emit('original pip failure marker')
+        with patch.object(bootstrap,'__file__',str(self.root/'bootstrap.py')),patch.object(bootstrap,'DIAGNOSTIC_LOG',None),patch.object(bootstrap,'diagnose',side_effect=write_marker),redirect_stdout(io.StringIO()):
+            self.assertEqual(bootstrap.main(['--diagnose']),0)
+            self.assertEqual(bootstrap.main(['--diagnose']),0)
+        content=(self.root/'emga-khoi-dong.log').read_text(encoding='utf-8')
+        self.assertEqual(content.count('original pip failure marker'),2)
     def test_probe_checks_real_versions_and_imports(self):
         import sys
         self.assertTrue(bootstrap.dependencies_ok(Path(sys.executable),[('Flask','3.1.3','flask')]))
