@@ -23,3 +23,10 @@ Trước khi dùng chính thức: kiểm tra trên máy Windows của đơn vị
 - 17 kiểm thử API/nghiệp vụ đều đạt, gồm chẩn đoán chưa có hồ sơ dù đã có Excel, toàn bộ hồ sơ chờ xác nhận, kỳ trước ngày hiệu lực và tệp Excel xuất có ghi tình trạng dữ liệu.
 - Trình duyệt Chromium: tái hiện Excel nguồn chưa có hồ sơ → nhập hồ sơ cần rà soát → báo cáo 0 với thông báo rõ → dùng nút tới hồ sơ, xác nhận một người → báo cáo thành 1. Kiểm tra kỳ trước ngày hiệu lực, nút đổi sang kỳ có dữ liệu, lỗi API giả lập hiển thị ngay tại báo cáo và tổng hợp lại thành công. Không có lỗi JavaScript.
 - Luồng trước đây gồm thêm người, điều động tương lai, báo cáo trước/sau quyết định và xuất Excel vẫn qua kiểm thử trình duyệt. Chưa truy cập máy Windows hay cơ sở dữ liệu của người dùng; không khẳng định đã kiểm tra trực tiếp bản cài tại đơn vị.
+
+## Bản 0.3.0 — bộ lọc và trạng thái mã cuối kỳ
+
+- Kiểm thử API: đọc GO/HE có tiêu đề, mã có/trống/0/lỗi, công thức thiếu cache, hai cột bất đồng; nhập trạng thái tự động; giữ người đã nghỉ và người thiếu/trùng mã bằng mã lưu trữ nội bộ; kết hợp bộ lọc hồ sơ; lọc nguồn và xuất XLSX; chuyển trang không lặp/bỏ sót; cập nhật trạng thái nguồn cho hồ sơ cũ có kiểm tra phiên bản và giữ lịch sử.
+- Trên tệp thật, trong thư mục tạm: đọc được 692 dòng còn mã và 70 dòng hết mã; nhập giữ đủ 762 hồ sơ. Trong nhóm đã nghỉ có 38 dòng thiếu mã nhân sự được giữ bằng mã lưu trữ. Báo cáo tự tổng hợp đang làm đếm 692 dòng, không đếm 70 dòng đã nghỉ. Nhập lại không tạo thêm hồ sơ. Có dòng trùng mã nhân sự nguồn nên chưa kết luận số cá nhân duy nhất; không tự gộp/xóa.
+- Kiểm thử Chromium: lọc người đã nghỉ ngay trên Excel nguồn; tải và đọc danh sách XLSX theo bộ lọc; lọc kết hợp nguồn/trạng thái/đơn vị; nhập hồ sơ theo mã cuối kỳ; lọc hồ sơ theo trạng thái/đơn vị/nhóm/trình độ/tuổi; chọn chỉ các hồ sơ đang lọc; cập nhật trạng thái từ nguồn cho hồ sơ đã nhập; kiểm tra báo cáo lịch sử 2 → 3 → 2 sau các mốc trạng thái. Không có lỗi JavaScript.
+- Giữ nguyên tệp nguồn, không phát tán dữ liệu nhân sự trong mã nguồn. Ngày chốt nguồn không được coi là ngày nghỉ thực tế; chưa suy diễn lịch sử trước ngày có dữ liệu. Chưa kiểm thử trực tiếp Windows.

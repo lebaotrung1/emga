@@ -5,7 +5,8 @@ from datetime import datetime, date, timedelta
 from functools import wraps
 from flask import Flask, request, session, redirect, render_template, jsonify, send_file, abort
 from werkzeug.security import generate_password_hash, check_password_hash
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
+from source_data import source_status, source_filters, matches_source, text_at, education_at, value_at, is_person_row
 from openpyxl.cell.cell import MergedCell
 from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.workbook.properties import CalcProperties
@@ -137,8 +138,9 @@ def create_app(data_dir=None):
     @auth()
     def metadata(bid):
         with lock:
-            b,(w,_) = book(bid)
-            return jsonify(**dict(b), external_links=len(w._external_links),sheets=[dict(name=s.title,rows=s.max_row,cols=s.max_column) for s in w])
+            b,(w,cached_book) = book(bid)
+            source_info=source_filters(w['DU LIEU CO SO'],cached_book['DU LIEU CO SO'],patches(bid,'DU LIEU CO SO')) if 'DU LIEU CO SO' in w.sheetnames else None
+            return jsonify(source_info=source_info,**dict(b), external_links=len(w._external_links),sheets=[dict(name=s.title,rows=s.max_row,cols=s.max_column) for s in w])
     @app.get('/api/book/<bid>/sheet')
     @auth()
     def sheet(bid):
@@ -150,13 +152,22 @@ def create_app(data_dir=None):
                 start=max(1,int(request.args.get('row',1))); col=max(1,int(request.args.get('col',1)))
             except ValueError: abort(400,'Vị trí không hợp lệ.')
             q=request.args.get('q','').strip().casefold()
-            rows=range(start,min(start+30,s.max_row+1))
-            if q:
+            filters={key:request.args.get(key,'') for key in ('status','unit','education')}
+            filtering=any(v and v!='all' for v in filters.values())
+            if filters['status'] not in ('','all','active','terminated','review'):abort(400,'Trạng thái lọc không hợp lệ.')
+            if filtering and name!='DU LIEU CO SO':abort(400,'Bộ lọc nhân sự chỉ áp dụng trang DU LIEU CO SO.')
+            rows=range(start,min(start+30,s.max_row+1));has_more=start+30<=s.max_row
+            if filtering:
+                filters['q']=q
+                matches=[r for r in range(start,s.max_row+1) if matches_source(s,cached,p,r,filters)]
+                rows=matches[:30];has_more=len(matches)>30
+            elif q:
                 rows=[]
                 for r in range(start,s.max_row+1):
                     # Search raw literals and Excel's last saved results; no formulas are executed.
                     if any(q in display(p.get((name,c.coordinate),cached.cell(r,c.column).value if c.data_type=='f' else c.value)).casefold() for c in s[r]): rows.append(r)
                     if len(rows)==30: break
+            rows=list(rows)
             out=[]
             for r in rows:
                 cells=[]
@@ -164,8 +175,9 @@ def create_app(data_dir=None):
                     cell=s.cell(r,cc); formula=cell.data_type=='f'; coord=cell.coordinate
                     value=p.get((name,coord),cached.cell(r,cc).value if formula else cell.value)
                     cells.append(dict(cell=coord,value=display(value),formula=formula,expression=cell.value if formula else '',merged=isinstance(cell,MergedCell),edited=(name,coord) in p, date=isinstance(cell.value,(date,datetime))))
-                out.append(dict(row=r,cells=cells))
-            return jsonify(revision=b['revision'],rows=out,columns=[get_column_letter(c) for c in range(col,min(col+16,s.max_column+1))], total_rows=s.max_row,total_cols=s.max_column)
+                info=source_status(s,cached,p,r) if name=='DU LIEU CO SO' and r>=4 and is_person_row(s,cached,p,r) else None
+                out.append(dict(row=r,cells=cells,source_status=info))
+            return jsonify(next_row=rows[-1]+1 if rows and has_more else None,revision=b['revision'],rows=out,columns=[get_column_letter(c) for c in range(col,min(col+16,s.max_column+1))], total_rows=s.max_row,total_cols=s.max_column)
     @app.post('/api/book/<bid>/cell')
     @auth(('admin','editor'))
     def edit(bid):
@@ -209,6 +221,29 @@ def create_app(data_dir=None):
             w.calculation=CalcProperties(calcId=0,fullCalcOnLoad=True,forceFullCalc=True)
             result=io.BytesIO();w.save(result);result.seek(0)
         return send_file(result,as_attachment=True,download_name='Bao_cao_cap_nhat.xlsx',mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    @app.get('/api/book/<bid>/filtered-export')
+    @auth()
+    def export_filtered_source(bid):
+        from hr import STATUSES, EDUCATION
+        filters={key:request.args.get(key,'') for key in ('status','unit','education','q')}
+        if filters['status'] not in ('','all','active','terminated','review'):abort(400,'Trạng thái lọc không hợp lệ.')
+        with lock:
+            _,(w,v)=book(bid)
+            if 'DU LIEU CO SO' not in w.sheetnames:abort(400,'Không có trang dữ liệu nhân sự nguồn.')
+            s=w['DU LIEU CO SO'];cached=v[s.title];changes=patches(bid,s.title)
+            output=Workbook();dest=output.active;dest.title='Danh sách lọc từ Excel'
+            dest.append(['Dòng nguồn','Mã','Họ tên','Ngày sinh','Ngày vào làm','Chức danh','Mã đơn vị','Mã cuối kỳ GO','Mã cuối kỳ HE','Trạng thái theo mã cuối kỳ','Trình độ dự kiến','Căn cứ trạng thái'])
+            for r in range(4,s.max_row+1):
+                if not matches_source(s,cached,changes,r,filters):continue
+                info=source_status(s,cached,changes,r)
+                dest.append([r,text_at(s,cached,changes,r,5),text_at(s,cached,changes,r,6),display(value_at(s,cached,changes,r,7)),display(value_at(s,cached,changes,r,13)),text_at(s,cached,changes,r,2),text_at(s,cached,changes,r,206) or text_at(s,cached,changes,r,14),text_at(s,cached,changes,r,197),text_at(s,cached,changes,r,213),STATUSES[info['status']],EDUCATION[education_at(s,cached,changes,r)],info['status_reason']])
+            for row in dest:
+                for cell in row:
+                    if cell.data_type=='f':cell.data_type='s'
+            dest.freeze_panes='D2';dest.auto_filter.ref=dest.dimensions
+            for column in dest.columns:dest.column_dimensions[column[0].column_letter].width=25
+            out=io.BytesIO();output.save(out);out.seek(0)
+        return send_file(out,as_attachment=True,download_name='Danh_sach_loc_tu_Excel.xlsx',mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     @app.get('/api/book/<bid>/people')
     @auth()
     def people(bid):

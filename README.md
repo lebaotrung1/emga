@@ -1,14 +1,20 @@
-# Emga HR — bản chạy thử 0.2.1
+# Emga HR — bản chạy thử 0.3.0
 
 Ứng dụng nhân sự tiếng Việt cho Windows, sử dụng chung qua trình duyệt trong LAN. Bản 0.2 bổ sung **hồ sơ nhân sự, phân nhóm tự động, quyết định có ngày hiệu lực và báo cáo tự tổng hợp**. Chưa thay thế đầy đủ các mẫu báo cáo chính thức của đơn vị và chưa tính tiền lương. Mã nguồn không chứa tệp Excel hoặc dữ liệu nhân sự người dùng.
 
-## Sửa trường hợp báo cáo ra toàn số 0 (0.2.1)
+## Mới ở 0.3.0 — mã cuối kỳ và bộ lọc
 
-Báo cáo mở ra sẽ tự tổng hợp kỳ đang chọn và hiển thị tình trạng dữ liệu: chưa chuyển Excel thành hồ sơ, hồ sơ còn chờ xác nhận, kỳ trước ngày hồ sơ có hiệu lực, hoặc thực sự không còn ai đang làm. Mỗi trường hợp có hướng dẫn/nút chuyển tới bước xử lý. Nếu API lỗi thì hiển thị lỗi tại khu vực báo cáo và ẩn kết quả cũ.
+Theo quy ước người dùng đã xác nhận: **còn mã cuối kỳ là đang làm; không còn mã là đã nghỉ, vẫn giữ tên để tra cứu/báo cáo giai đoạn**. Đọc GO (công ty) và HE (TKV), kiểm tra tiêu đề “Cuối kì/kỳ” ở dòng 2–3. Trống, chuỗi rỗng hoặc 0 là đã nghỉ. Nếu chỉ có một cột đúng tiêu đề thì dùng cột đó; hai cột có trạng thái trái nhau hoặc ô lỗi/công thức chưa có kết quả lưu thì Cần rà soát. Đây là trạng thái tại ngày chốt của tệp, **không suy ra ngày nghỉ thực tế**.
 
-Nếu đã nhập hồ sơ nhưng báo cáo vẫn 0: vào **Hồ sơ nhân sự**, xem đúng ngày, chọn những người đã rà soát, đặt trạng thái **Đang làm việc**, chọn ngày hiệu lực đúng với thực tế và bấm **Ghi nhận các hồ sơ đã chọn**. Sau đó mở lại **Báo cáo tự tổng hợp** với ngày cuối kỳ từ ngày hiệu lực trở đi. Không chọn tất cả là đang làm nếu chưa kiểm tra người đã nghỉ. Nếu mới tải Excel nguồn, dùng nút **Mở bước nhập hồ sơ từ Excel** để thực hiện bước chuyển thành hồ sơ trước.
+- **Excel nguồn:** lọc Tất cả / Đang làm / Đã nghỉ / Cần rà soát, đơn vị, trình độ, kết hợp tìm kiếm. Chuyển trang theo đúng các dòng phù hợp, không bỏ sót do khoảng cách giữa các dòng. Bấm **Xuất danh sách đang lọc** để tải một danh sách XLSX độc lập. **Xuất toàn bộ Excel** vẫn giữ tất cả dòng/công thức/biểu gốc, không bị giới hạn bởi bộ lọc trên màn hình.
+- **Hồ sơ nhân sự:** lọc trạng thái, đơn vị, nhóm lao động, trình độ, nhóm tuổi và tìm tên/mã. Mặc định Tất cả, không ẩn người đã nghỉ. **Chọn các dòng đang lọc** chỉ chọn đúng phần giao của mọi bộ lọc đang dùng. Bộ lọc hồ sơ không tự giới hạn báo cáo tổng hợp: báo cáo vẫn tính toàn bộ hồ sơ tại kỳ đã chọn.
+- Thiếu mã nhân sự hoặc trùng mã nguồn không làm mất tên: tạo mã `LUU-TRU-...` riêng theo tệp/dòng, giữ mã nguồn trong bằng chứng nhập. Các dòng trùng mã có cảnh báo để rà soát trùng người; vẫn giữ trạng thái theo mã cuối kỳ đúng quy ước người dùng. Không tự gộp người theo tên hay mã trùng. Số tổng hợp từ tệp là số dòng hồ sơ, chưa phải kết luận số cá nhân duy nhất khi tệp còn trùng người.
+- Khi mới nhập hồ sơ, tự gán trạng thái theo mã cuối kỳ, không bắt xác nhận lại tất cả người đang làm như bản trước.
+- **Hồ sơ đã nhập ở bản cũ:** chọn đúng tệp trong Excel nguồn → Hồ sơ nhân sự → **Nhập từ Excel đang chọn** → xem bảng **Cập nhật trạng thái hồ sơ đã nhập ở bản cũ** → chọn ngày ghi nhận đúng → **Áp dụng trạng thái từ mã cuối kỳ cho các hồ sơ bên trên**. Thao tác có xác nhận, kiểm tra phiên bản và chỉ thay trạng thái; giữ trình độ, vị trí và lịch sử trước ngày ghi nhận. Không tự cập nhật khi vừa mở chương trình; không dùng tệp chốt cũ để ghi đè quyết định mới nếu không có chủ ý.
 
-Khi nâng cấp, dừng máy chủ bản cũ, chạy bản mới rồi bấm Ctrl+F5 trên trình duyệt. Nhãn góc trên phải là **0.2.1**. Tệp JavaScript/CSS có mã phiên bản mới để tránh dùng nhầm bản lưu trong trình duyệt.
+Nếu báo cáo ra 0, khu vực báo cáo giải thích rõ: chưa chuyển Excel thành hồ sơ, kỳ trước ngày có dữ liệu, trạng thái chờ rà soát hoặc không còn ai đang làm. Dùng các nút hướng dẫn tại đó. Không đánh dấu tất cả là đang làm nếu mã cuối kỳ đã trống.
+
+Khi nâng cấp: sao lưu, dừng máy chủ cũ, giải nén/chạy bản mới và bấm Ctrl+F5. Góc trên phải phải hiện **0.3.0**. Dữ liệu/tài khoản cũ vẫn dùng cùng thư mục dữ liệu; trạng thái nguồn cập nhật theo bước có xem trước ở trên.
 
 ## Cài mới trên Windows
 
@@ -32,10 +38,10 @@ Không có bộ cài `.exe`. Đã kiểm thử bằng Chromium và Waitress trê
 ### 1. Chuẩn bị dữ liệu ban đầu
 
 - Vào **Excel nguồn**, nhập/chọn tệp `.xlsx`.
-- Vào **Hồ sơ nhân sự**, bấm **Nhập từ Excel đang chọn**. Xem trước họ tên, mã, ngày sinh, trình độ dự kiến, chức danh và mã đơn vị. Chọn ngày chốt số liệu thực sự đã biết rồi bấm nhập.
+- Vào **Hồ sơ nhân sự**, bấm **Nhập từ Excel đang chọn**. Xem trước họ tên, mã, ngày sinh, trình độ dự kiến, chức danh và mã đơn vị. Chọn ngày chốt số liệu thực sự đã biết rồi bấm nhập. Trạng thái được xác định theo mã cuối kỳ, không xóa tên người đã nghỉ.
 - Tệp chuẩn cần trang `DU LIEU CO SO`: mã E, tên F, sinh G, vào làm M, chức danh B; mã đơn vị ưu tiên GX (cột 206), nếu trống dùng N. Cột đánh dấu trình độ: AY/51 đại học, BZ/78 cao đẳng, DA/105 trung cấp, EB/132 CNKT, FC/159 chưa đào tạo. Đây là ánh xạ riêng cho tệp đã cung cấp, không áp dụng tùy ý cho tệp có cấu trúc khác.
-- Không tự suy giới tính từ họ tên hay trạng thái đang làm từ công thức cũ. Tất cả hồ sơ nhập lần đầu ở trạng thái **Cần rà soát**, chưa tính vào số đang làm. Dữ liệu ngày không đủ ngày/tháng/năm để trống; trình độ không xác định/đánh dấu nhiều nhóm ghi Chưa xác định. Cần kiểm tra lại trên bản gốc, đặc biệt phân biệt đại học/trên đại học.
-- Mã trùng, thiếu mã, tên không hợp lệ hoặc dòng đã nhập bị bỏ qua; mọi dòng cùng mã trùng trong tệp đều cần rà soát, không tùy ý chọn dòng đầu; không tự gộp theo tên. Mã nhân sự là duy nhất trong toàn bộ hồ sơ quản lý. Tên nguồn không tự đồng nhất với hồ sơ khác.
+- Không tự suy giới tính từ họ tên. Trạng thái theo quy ước mã cuối kỳ, dùng giá trị Excel lưu lần cuối, không chạy công thức. Hồ sơ nhập lần đầu tự nhận trạng thái theo mã cuối kỳ; trường hợp không đọc được mã thì Cần rà soát. Dữ liệu ngày không đủ ngày/tháng/năm để trống; trình độ không xác định/đánh dấu nhiều nhóm ghi Chưa xác định. Cần kiểm tra lại trên bản gốc, đặc biệt phân biệt đại học/trên đại học.
+- Tên/dòng tổng không hợp lệ hoặc dòng đã nhập bị bỏ qua; mã nhân sự thiếu/trùng dùng mã lưu trữ nội bộ để giữ tên như mô tả ở trên. Mã lưu hồ sơ là duy nhất. Không tự gộp theo tên và không tự đồng nhất các dòng thiếu/trùng mã với hồ sơ khác.
 - Sửa từng hồ sơ hoặc đánh dấu nhiều người đã rà soát để cập nhật trạng thái, trình độ/vị trí cùng ngày hiệu lực. Ghi nhận hàng loạt có kiểm tra phiên bản và thực hiện trọn giao dịch: có xung đột thì không ghi nửa chừng.
 
 ### 2. Khai báo danh mục phân nhóm
@@ -56,7 +62,7 @@ Bấm **Thêm nhân sự**, nhập mã, họ tên, ngày sinh, vào làm, giới
 - Thay đổi lưu thành sự kiện, không ghi đè ảnh chụp hồ sơ cũ. Lịch sử hiển thị ở nút **Lịch sử**.
 - Chọn ngày xem hồ sơ ở đầu trang để xem phân nhóm tại ngày đó. Tải lại khi đồng nghiệp vừa chỉnh sửa. Không ghi biến động có ngày trước biến động gần nhất; cần chọn đúng trình tự ngày. Nếu đã có quyết định tương lai, không thể chèn biến động sớm hơn trong bản thử này.
 
-Hồ sơ mới trạng thái Đang làm cần ngày sinh, ngày vào làm và vị trí. Hồ sơ còn thiếu thông tin nên để Cần rà soát. Khi xác nhận các hồ sơ nhập cũ dù còn thiếu thuộc tính, báo cáo vẫn cảnh báo các thông tin chưa rõ và có nhóm Chưa xác định.
+Hồ sơ mới trạng thái Đang làm cần ngày sinh, ngày vào làm và vị trí. Hồ sơ nhập Excel dùng trạng thái mã cuối kỳ; các thuộc tính thiếu vẫn hiển thị cảnh báo. Khi nhập tay mà chưa đủ thông tin, có thể để Cần rà soát. Khi xác nhận các hồ sơ nhập cũ dù còn thiếu thuộc tính, báo cáo vẫn cảnh báo các thông tin chưa rõ và có nhóm Chưa xác định.
 
 ### 4. Quyết định tự cập nhật hồ sơ
 

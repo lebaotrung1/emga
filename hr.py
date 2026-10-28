@@ -7,6 +7,7 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill
 from docx import Document
 from docx.shared import Pt
+from source_data import source_status, education_at, is_person_row
 
 GROUPS = {'management':'Quản lý','technology':'Công nghệ','auxiliary':'Phụ trợ','service':'Phục vụ','unknown':'Chưa xác định'}
 EDUCATION = {'postgraduate':'Trên đại học','university':'Đại học','college':'Cao đẳng','intermediate':'Trung cấp','vocational':'CNKT','untrained':'Chưa qua đào tạo','unknown':'Chưa xác định'}
@@ -85,8 +86,12 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
         CREATE TABLE IF NOT EXISTS hr_people(id TEXT PRIMARY KEY,code TEXT NOT NULL UNIQUE,version INTEGER NOT NULL DEFAULT 0,source_book TEXT,source_row INTEGER,UNIQUE(source_book,source_row));
         CREATE TABLE IF NOT EXISTS hr_events(id INTEGER PRIMARY KEY,person TEXT NOT NULL,effective TEXT NOT NULL,kind TEXT NOT NULL,snapshot TEXT NOT NULL,decision TEXT UNIQUE,actor TEXT NOT NULL,stamp TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS hr_events_person_date ON hr_events(person,effective,id);
+        CREATE TABLE IF NOT EXISTS hr_source_evidence(person TEXT PRIMARY KEY,book TEXT NOT NULL,source_row INTEGER NOT NULL,source_revision INTEGER NOT NULL,end_column TEXT,end_code TEXT,status TEXT,observed_date TEXT,source_code TEXT);
         CREATE TABLE IF NOT EXISTS hr_decisions(id TEXT PRIMARY KEY,person TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL,applied INTEGER NOT NULL DEFAULT 0,stamp TEXT NOT NULL,actor TEXT NOT NULL);
         ''')
+    with db() as c:
+        if 'source_code' not in {r['name'] for r in c.execute('PRAGMA table_info(hr_source_evidence)')}:
+            c.execute('ALTER TABLE hr_source_evidence ADD COLUMN source_code TEXT')
     def fail(message): abort(400,message)
     def read_date(v,required=True):
         try:return iso(v,required)
@@ -116,7 +121,11 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
         if j['labor_group']=='unknown':warnings.append('Vị trí chưa có nhóm lao động')
         if data['status']=='review':warnings.append('Chưa xác nhận trạng thái làm việc')
         if not data['gender']:warnings.append('Chưa xác nhận giới tính')
-        return dict(id=p['id'],code=p['code'],version=p['version'],**data,age=age,age_group=band,job=j,warnings=warnings,effective=event['effective'],event_kind=event['kind'])
+        evidence=c.execute('SELECT * FROM hr_source_evidence WHERE person=?',(p['id'],)).fetchone()
+        if p['code'].startswith('LUU-TRU-') and evidence:
+            warnings.append('Mã nhân sự nguồn trùng; cần rà soát trùng người' if evidence['source_code'] else 'Thiếu mã nhân sự nguồn; dùng mã lưu trữ nội bộ')
+        if data['status']=='terminated' and event['kind'] in ('baseline','source_status'):warnings.append('Đã nghỉ theo mã cuối kỳ; ngày ghi nhận không phải ngày nghỉ thực tế')
+        return dict(source_evidence=dict(evidence) if evidence else None,id=p['id'],code=p['code'],version=p['version'],**data,age=age,age_group=band,job=j,warnings=warnings,effective=event['effective'],event_kind=event['kind'])
     def validate_snapshot(c,d,effective):
         values={k:string(d,k,k in ('name','status','education')) for k in FIELDS}
         values['birth_date']=read_date(values['birth_date'],False);values['hire_date']=read_date(values['hire_date'],False)
@@ -167,6 +176,16 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
             c.execute('INSERT INTO hr_job_rules(job,effective,labor_group,technical,grade) VALUES(?,?,?,?,?)',(jid,effective,group,int(technical),grade))
             c.execute('UPDATE hr_jobs SET version=version+1 WHERE id=?',(jid,));audit(c,'hr_rule_created',dict(job=jid,effective=effective,group=group,technical=technical,grade=grade))
         return jsonify(ok=True)
+    def people_filter(rows):
+        status=request.args.get('status','all')
+        if status not in ('all','',*STATUSES):fail('Trạng thái lọc không hợp lệ.')
+        q=request.args.get('q','').strip().casefold()
+        return [p for p in rows if (status in ('','all') or p['status']==status)
+                and (not request.args.get('unit') or p['job']['unit']==request.args['unit'])
+                and (not request.args.get('group') or p['job']['labor_group']==request.args['group'])
+                and (not request.args.get('education') or p['education']==request.args['education'])
+                and (not request.args.get('age_group') or p['age_group']==request.args['age_group'])
+                and (not q or q in (p['code']+' '+p['name']+' '+p['job']['unit']+' '+p['job']['title']+' '+((p['source_evidence'] or {}).get('source_code') or '')).casefold())]
     @app.get('/api/hr/people')
     @auth()
     def list_people():
@@ -176,7 +195,7 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
             for p in c.execute('SELECT * FROM hr_people ORDER BY code').fetchall():
                 event=latest(c,p['id'],asof)
                 if event:out.append(classified(c,p,event,asof,scheme))
-        return jsonify(out)
+        return jsonify(people_filter(out))
     @app.get('/api/hr/people/<pid>/history')
     @auth()
     def hr_history(pid):
@@ -227,25 +246,58 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
             def text(col):
                 raw=val(col);return str(raw).strip() if raw is not None else ''
             name=text(6)
-            if not name:continue
-            code=text(5);birth=parse_excel_date(val(7));hire=parse_excel_date(val(13));flags=[];edu='unknown'
-            for col,key in [(51,'university'),(78,'college'),(105,'intermediate'),(132,'vocational'),(159,'untrained')]:
-                raw=text(col)
-                if raw and raw not in ('0','#REF!','#N/A','#VALUE!'):flags.append(key)
-            if len(flags)==1:edu=flags[0]
+            if not name or not is_person_row(s,saved,p,r):continue
+            code=text(5);birth=parse_excel_date(val(7));hire=parse_excel_date(val(13));edu=education_at(s,saved,p,r)
+            status_info=source_status(s,saved,p,r)
             problem=[]
-            if not code:problem.append('Thiếu mã')
-            if code in codes:problem.append('Mã đã có trong hồ sơ')
+            storage_code=code or f'LUU-TRU-{bid[:8]}-{r}'
+            if storage_code in codes:problem.append('Mã đã có trong hồ sơ')
             if not any(ch.isalpha() for ch in name):problem.append('Tên không hợp lệ')
             if (bid,r) in sources:problem.append('Dòng đã nhập')
-            # Imported rows remain under review regardless of cached headcount indicators.
-            out.append(dict(row=r,code=code,name=name,birth_date=birth,hire_date=hire,title=text(2),unit=text(206) or text(14),education=edu,gender='',status='review',problems=problem,eligible=not problem))
+            out.append(dict(row=r,code=code,storage_code=storage_code,name=name,birth_date=birth,hire_date=hire,title=text(2),unit=text(206) or text(14),education=edu,gender='',**status_info,problems=problem,eligible=not problem))
         counts=Counter(item['code'] for item in out if item['code'])
         for item in out:
             if item['code'] and counts[item['code']]>1:
-                item['problems'].append('Trùng mã trong tệp nguồn — cần rà soát trước khi nhập')
-                item['eligible']=False
+                item['storage_code']=f'LUU-TRU-{bid[:8]}-{item["row"]}'
+                item['status_reason']+=' Trùng mã nhân sự nguồn: giữ riêng từng dòng bằng mã lưu trữ nội bộ, cần rà soát trùng người.'
+                if item['storage_code'] in codes and 'Mã đã có trong hồ sơ' not in item['problems']:item['problems'].append('Mã lưu trữ đã có trong hồ sơ')
+                item['eligible']=not item['problems']
         return out
+    def record_evidence(c,pid,bid,item,revision,effective):
+        c.execute('INSERT OR REPLACE INTO hr_source_evidence(person,book,source_row,source_revision,end_column,end_code,status,observed_date,source_code) VALUES(?,?,?,?,?,?,?,?,?)',(pid,bid,item['row'],revision,item['end_column'],item['end_code'],item['status'],effective,item.get('source_code',item.get('code',''))))
+    def status_sync_candidates(bid):
+        items={item['row']:item for item in import_candidates(bid)};out=[]
+        with db() as c:
+            for p in c.execute('SELECT * FROM hr_people WHERE source_book=? ORDER BY code',(bid,)).fetchall():
+                item=items.get(p['source_row'])
+                if not item or item['storage_code']!=p['code'] or item['status']=='review':continue
+                e=latest(c,p['id']);data=json.loads(e['snapshot'])
+                if data['status']!=item['status']:
+                    out.append(dict(id=p['id'],version=p['version'],code=p['code'],source_code=item['code'],name=data['name'],row=p['source_row'],current_status=data['status'],proposed_status=item['status'],end_column=item['end_column'],end_code=item['end_code'],status_reason=item['status_reason'],last_effective=e['effective']))
+        return out
+    @app.get('/api/hr/import/<bid>/sync-status')
+    @auth(('admin','editor'))
+    def preview_status_sync(bid):
+        with lock:return jsonify(status_sync_candidates(bid))
+    @app.post('/api/hr/import/<bid>/sync-status')
+    @auth(('admin','editor'))
+    def sync_source_status(bid):
+        d=request.get_json() or {};effective=read_date(d.get('effective'));selected=d.get('selected')
+        if not isinstance(selected,list) or not 1<=len(selected)<=1000 or any(not isinstance(x,dict) or not isinstance(x.get('id'),str) for x in selected):fail('Chọn danh sách hồ sơ đã xem trước.')
+        if len({x['id'] for x in selected})!=len(selected):fail('Danh sách lặp hồ sơ.')
+        with lock:
+            b,_=book(bid)
+            if d.get('revision')!=b['revision']:abort(409,'Tệp nguồn vừa thay đổi. Xem trước lại trạng thái.')
+            candidates={x['id']:x for x in status_sync_candidates(bid)}
+            with db() as c:
+                for item in selected:
+                    change=candidates.get(item['id'])
+                    if not change or item.get('version')!=change['version']:abort(409,'Một hồ sơ đã thay đổi; chưa ghi nhận hồ sơ nào. Xem trước lại.')
+                    p=person(c,item['id']);e=latest(c,p['id']);data=json.loads(e['snapshot']);data['status']=change['proposed_status']
+                    add_event(c,p,effective,'source_status',data)
+                    record_evidence(c,p['id'],bid,dict(row=change['row'],source_code=change['source_code'],end_column=change['end_column'],end_code=change['end_code'],status=change['proposed_status']),b['revision'],effective)
+                audit(c,'hr_status_sync',dict(book=bid,count=len(selected),effective=effective))
+        return jsonify(updated=len(selected))
     @app.get('/api/hr/import/<bid>')
     @auth(('admin','editor'))
     def preview_import(bid):
@@ -270,8 +322,9 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
                     data={k:item.get(k,'') for k in FIELDS};data['job_id']=jid
                     if data['birth_date'] and data['birth_date']>effective:data['birth_date']=''
                     if data['hire_date'] and data['hire_date']>effective:data['hire_date']=''
-                    pid=secrets.token_hex(16);c.execute('INSERT INTO hr_people(id,code,source_book,source_row) VALUES(?,?,?,?)',(pid,item['code'],bid,item['row']))
-                    add_event(c,person(c,pid),effective,'baseline',data);count+=1
+                    pid=secrets.token_hex(16);c.execute('INSERT INTO hr_people(id,code,source_book,source_row) VALUES(?,?,?,?)',(pid,item['storage_code'],bid,item['row']))
+                    add_event(c,person(c,pid),effective,'baseline',data)
+                    record_evidence(c,pid,bid,item,b['revision'],effective);count+=1
                 audit(c,'hr_import',dict(book=bid,count=count,skipped=skipped,baseline=effective))
         return jsonify(imported=count,skipped=skipped)
     def decision_data(c,d):
@@ -383,7 +436,7 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
     def report_export():
         with lock:d=build_report(*report_args())
         w=Workbook();s=w.active;s.title='Tổng hợp nội bộ'
-        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.2.1']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
+        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.3.0']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
         s.append(['Tình trạng dữ liệu',d['readiness']['message']])
         for warning in d['warnings']:s.append(['Lưu ý',warning])
         for key,title in [('groups','Nhóm lao động'),('education','Trình độ'),('ages','Nhóm tuổi'),('grades','Bậc CNKT')]:
@@ -391,7 +444,7 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
             for name,count in d[key].items():s.append([name,count])
         s=w.create_sheet('Biến động đơn vị');s.append(['Đơn vị','Đầu kỳ','Tăng / chuyển vào / xác nhận','Giảm / chuyển ra','Cuối kỳ'])
         for u in d['units']:s.append([u[k] for k in ('unit','opening','increase','decrease','closing')])
-        s=w.create_sheet('Danh sách chốt kỳ');s.append(['Mã','Họ tên','Ngày sinh','Tuổi','Nhóm tuổi','Trình độ','Chức danh','Đơn vị','Nhóm lao động','CNKT','Bậc','Trạng thái','Cần rà soát'])
+        s=w.create_sheet('Danh sách chốt kỳ');s.append(['Mã / mã lưu trữ nội bộ','Họ tên','Ngày sinh','Tuổi','Nhóm tuổi','Trình độ','Chức danh','Đơn vị','Nhóm lao động','CNKT','Bậc','Trạng thái','Cần rà soát'])
         for p in d['people']:s.append([p['code'],p['name'],p['birth_date'],p['age'],p['age_group'],EDUCATION[p['education']],p['job']['title'],p['job']['unit'],GROUPS[p['job']['labor_group']],p['job']['technical'],p['job']['grade'],STATUSES[p['status']],'; '.join(p['warnings'])])
         s=w.create_sheet('Lịch sử trong kỳ');s.append(['Mã','Họ tên','Ngày hiệu lực','Loại biến động','Đơn vị trước','Đơn vị sau'])
         for m in d['movements']:s.append([m[k] for k in ('code','name','effective','kind','old_unit','new_unit')])

@@ -81,8 +81,9 @@ class PersonnelWorkflow(unittest.TestCase):
         f=io.BytesIO();w.save(f);f.seek(0)
         r=self.client.post('/api/import',headers=self.h,data={'file':(f,'duplicates.xlsx')});self.assertEqual(r.status_code,200);bid=r.json['id']
         preview=self.client.get('/api/hr/import/'+bid).json
-        self.assertEqual(len(preview),2);self.assertTrue(all(not p['eligible'] for p in preview))
-        r=self.post('/api/hr/import/'+bid,dict(effective='2026-10-01',revision=0));self.assertEqual(r.json['imported'],0);self.assertEqual(r.json['skipped'],2)
+        self.assertEqual(len(preview),2);self.assertTrue(all(p['eligible'] and p['status']=='review' for p in preview));self.assertEqual(len({p['storage_code'] for p in preview}),2)
+        r=self.post('/api/hr/import/'+bid,dict(effective='2026-10-01',revision=0));self.assertEqual(r.json['imported'],2);self.assertEqual(r.json['skipped'],0)
+        archived=self.people('2026-10-01');self.assertEqual(len(archived),2);self.assertTrue(all(p['code'].startswith('LUU-TRU-') for p in archived))
     def test_batch_atomic_updates_and_history(self):
         jid=self.job('Kỹ thuật viên','PX1','technology');p1=self.hire('NV01',jid);p2=self.hire('NV02',jid)
         data=dict(effective='2026-10-01',selected=[dict(id=p1,version=1),dict(id=p2,version=99)],changes=dict(education='postgraduate'))
