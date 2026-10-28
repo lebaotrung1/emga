@@ -333,6 +333,8 @@ def create_app(data_dir=None):
                 c.execute('INSERT INTO decisions(stamp,actor,payload) VALUES(?,?,?)',(datetime.now().isoformat(),session['user'],json.dumps(fields,ensure_ascii=False)))
                 audit(c,'decision_created',dict(kind=kind,book=d['book'],row=r,number=d['number'],custom_template=template.exists()))
         return send_file(out,as_attachment=True,download_name='Du_thao_quyet_dinh.docx',mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    from hr import register_hr
+    register_hr(app, db, lock, auth, audit, book, patches, root)
     return app
 
 if __name__=='__main__':
