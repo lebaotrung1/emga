@@ -1,6 +1,21 @@
-# Emga HR — bản chạy thử 0.3.2
+# Emga HR — bản chạy thử 0.3.3
 
 Ứng dụng nhân sự tiếng Việt cho Windows, sử dụng chung qua trình duyệt trong LAN. Bản 0.2 bổ sung **hồ sơ nhân sự, phân nhóm tự động, quyết định có ngày hiệu lực và báo cáo tự tổng hợp**. Chưa thay thế đầy đủ các mẫu báo cáo chính thức của đơn vị và chưa tính tiền lương. Mã nguồn không chứa tệp Excel hoặc dữ liệu nhân sự người dùng.
+
+## Sửa ngày chốt nhập nhầm — 0.3.3
+
+Nếu đã có 762 hồ sơ nhưng báo cáo đến 30/09/2026 vẫn bằng 0 và báo “trước ngày hồ sơ bắt đầu có hiệu lực (2026-10-28)”, ngày chốt của lần nhập đang bị chọn thành ngày tải lên. Đổi kỳ báo cáo không đổi ngày chốt đã lưu.
+
+1. Sao lưu, đóng máy chủ cũ, chạy bản mới và tải lại trình duyệt (Ctrl+F5). Không cần xóa hoặc nhập lại hồ sơ.
+2. Trong **Báo cáo tự tổng hợp**, chọn kỳ cần báo cáo, bấm **Sửa ngày chốt nhập Excel** hoặc nút **Sửa ngày chốt của lần nhập Excel** trong khung hướng dẫn.
+3. Chọn đúng tệp đã nhập, ngày chốt đúng theo số liệu nguồn, bấm **Kiểm tra hồ sơ đủ điều kiện**. Từ ảnh lỗi của trường hợp này, ngày đề nghị là 30/09/2026 nếu đó thực sự là ngày chốt của tệp.
+4. Xem trước danh sách, nhập lý do, đánh dấu xác nhận đã đối chiếu tệp, bấm **Sửa ngày chốt và tổng hợp lại**.
+
+Chỉ sửa hồ sơ có đúng một sự kiện nhập ban đầu (`baseline`), chưa có chỉnh sửa/biến động và chưa có quyết định (kể cả dự thảo). Hồ sơ có ngày sinh/ngày vào làm sau ngày chốt đề nghị bị giữ nguyên. Màn hình báo rõ số đủ điều kiện và số được bảo vệ. Có kiểm tra phiên bản; nếu hồ sơ thay đổi giữa lúc xem trước và áp dụng, không ghi nửa chừng. Ngày cũ, ngày mới, lý do, người sửa và thời điểm được lưu trong lịch sử sửa ngày chốt; nội dung hồ sơ và trạng thái không đổi.
+
+Đây là sửa mốc của một lần nhập bị nhầm, không phải tạo lại lịch sử không có. Tệp chỉ chốt đến 30/09 không đủ để xác định chính xác số đầu năm và mọi lý do tăng/giảm từ 01/01. Báo cáo vẫn cảnh báo thiếu lịch sử trước ngày chốt; số cuối kỳ lấy được từ ảnh chụp dữ liệu đã xác nhận.
+
+Lần nhập mới không còn tự điền ngày hôm nay: phải chọn ngày mà tệp phản ánh. Nút cập nhật hàng loạt chỉ bật khi có hồ sơ và thuộc tính được chọn. Thông báo lỗi cũ được xóa khi đổi mục hoặc tổng hợp mới để tránh lẫn với lỗi báo cáo hiện tại.
 
 ## Khởi động Windows và chẩn đoán đầy đủ — 0.3.2
 
@@ -34,7 +49,7 @@ Theo quy ước người dùng đã xác nhận: **còn mã cuối kỳ là đan
 
 Nếu báo cáo ra 0, khu vực báo cáo giải thích rõ: chưa chuyển Excel thành hồ sơ, kỳ trước ngày có dữ liệu, trạng thái chờ rà soát hoặc không còn ai đang làm. Dùng các nút hướng dẫn tại đó. Không đánh dấu tất cả là đang làm nếu mã cuối kỳ đã trống.
 
-Khi nâng cấp: sao lưu, dừng máy chủ cũ, giải nén/chạy bản mới và bấm Ctrl+F5. Góc trên phải phải hiện **0.3.2** ở bản mới nhất. Dữ liệu/tài khoản cũ vẫn dùng cùng thư mục dữ liệu; trạng thái nguồn cập nhật theo bước có xem trước ở trên.
+Khi nâng cấp: sao lưu, dừng máy chủ cũ, giải nén/chạy bản mới và bấm Ctrl+F5. Góc trên phải phải hiện **0.3.3** ở bản mới nhất. Dữ liệu/tài khoản cũ vẫn dùng cùng thư mục dữ liệu; trạng thái nguồn cập nhật theo bước có xem trước ở trên.
 
 ## Cài mới trên Windows
 

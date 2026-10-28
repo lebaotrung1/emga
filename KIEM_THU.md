@@ -44,3 +44,10 @@ Trước khi dùng chính thức: kiểm tra trên máy Windows của đơn vị
 - Giữ kết quả thử trước là bằng chứng Linux, không coi là xác nhận đã sửa được máy Windows của người dùng. Python người dùng báo 3.12.5 nằm trong dải được hỗ trợ; chưa có lỗi gốc để kết luận Python cài hỏng hoặc đường dẫn dài là nguyên nhân.
 - Không đổi dữ liệu/tài khoản, không tự gửi log đi. Nhật ký chẩn đoán không đưa vào Git.
 - 37 kiểm thử đều đạt. Chạy tích hợp thật trên Linux với bố trí cache ngắn giống quyết định đường dẫn Windows: cài/import đủ thư viện ngoài thư mục giải nén dài/có dấu, thư mục giải nén thứ hai dùng lại cache mà không chạy pip, tệp dữ liệu mẫu không thay đổi. Kiểm thử log chạy chẩn đoán nhiều lần giữ lỗi trước đó. Đây là kiểm tra logic/bố trí trên Linux, không phải chứng nhận hoạt động trên Windows.
+
+## Bản 0.3.3 — sửa ngày chốt nhập nhầm
+
+- Tái hiện với bản sao tệp thật: nhập 762 hồ sơ ngày 28/10/2026; báo cáo 01/01–30/09 trả 0. Xem trước sửa ngày chốt 30/09 có 762 hồ sơ đủ điều kiện; sau sửa báo cáo cuối kỳ đếm 692 đang làm và giữ 70 đã nghỉ, không sinh/xóa hồ sơ. Cảnh báo thiếu lịch sử trước ngày chốt vẫn giữ nguyên.
+- Kiểm thử API: bảo toàn snapshot và nhật ký ngày cũ/mới; chặn sửa hồ sơ có biến động/quyết định, ngày chốt trước ngày sinh/ngày vào làm; kiểm tra xác nhận/lý do, xung đột phiên bản, thay đổi nguồn và rollback toàn giao dịch.
+- Chromium: tái hiện ngày chốt sai → mở hộp thoại sửa từ báo cáo → xem trước/nhập lý do/xác nhận → tổng hợp và xuất được số liệu trong cùng kỳ đã chọn; thao tác lặp bị vô hiệu khi đã đúng ngày; ngày nhập mới để trống bắt buộc chọn; thông báo đỏ cũ được xóa. Không có lỗi JavaScript.
+- Kiểm thử trên Linux, chưa trực tiếp trên cơ sở dữ liệu máy Windows người dùng. Giữ chức năng khởi động/chẩn đoán 0.3.2, chỉ đổi nhãn phiên bản.

@@ -87,6 +87,7 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
         CREATE TABLE IF NOT EXISTS hr_events(id INTEGER PRIMARY KEY,person TEXT NOT NULL,effective TEXT NOT NULL,kind TEXT NOT NULL,snapshot TEXT NOT NULL,decision TEXT UNIQUE,actor TEXT NOT NULL,stamp TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS hr_events_person_date ON hr_events(person,effective,id);
         CREATE TABLE IF NOT EXISTS hr_source_evidence(person TEXT PRIMARY KEY,book TEXT NOT NULL,source_row INTEGER NOT NULL,source_revision INTEGER NOT NULL,end_column TEXT,end_code TEXT,status TEXT,observed_date TEXT,source_code TEXT);
+        CREATE TABLE IF NOT EXISTS hr_baseline_revisions(id INTEGER PRIMARY KEY,person TEXT NOT NULL,event INTEGER NOT NULL,book TEXT NOT NULL,old_effective TEXT NOT NULL,new_effective TEXT NOT NULL,reason TEXT NOT NULL,actor TEXT NOT NULL,stamp TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS hr_decisions(id TEXT PRIMARY KEY,person TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL,applied INTEGER NOT NULL DEFAULT 0,stamp TEXT NOT NULL,actor TEXT NOT NULL);
         ''')
     with db() as c:
@@ -200,7 +201,11 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
     @auth()
     def hr_history(pid):
         with db() as c:
-            p=person(c,pid);return jsonify([dict(r) for r in c.execute('SELECT * FROM hr_events WHERE person=? ORDER BY effective,id',(pid,))])
+            p=person(c,pid)
+            events=[]
+            for r in c.execute('SELECT * FROM hr_events WHERE person=? ORDER BY effective,id',(pid,)).fetchall():
+                item=dict(r);item['baseline_corrections']=[dict(x) for x in c.execute('SELECT * FROM hr_baseline_revisions WHERE event=? ORDER BY id',(r['id'],))];events.append(item)
+            return jsonify(events)
     @app.post('/api/hr/people')
     @auth(('admin','editor'))
     def create_person():
@@ -327,6 +332,53 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
                     record_evidence(c,pid,bid,item,b['revision'],effective);count+=1
                 audit(c,'hr_import',dict(book=bid,count=count,skipped=skipped,baseline=effective))
         return jsonify(imported=count,skipped=skipped)
+    def baseline_candidates(c,bid,effective):
+        rows=[]
+        for p in c.execute('SELECT * FROM hr_people WHERE source_book=? ORDER BY code',(bid,)).fetchall():
+            events=c.execute('SELECT * FROM hr_events WHERE person=? ORDER BY effective,id',(p['id'],)).fetchall()
+            if not events:continue
+            e=events[0];data=json.loads(e['snapshot']);reasons=[]
+            if len(events)!=1 or e['kind']!='baseline':reasons.append('Đã có chỉnh sửa/biến động sau khi nhập; giữ nguyên lịch sử')
+            if c.execute('SELECT 1 FROM hr_decisions WHERE person=? LIMIT 1',(p['id'],)).fetchone():reasons.append('Đã lập quyết định; không sửa ngày chốt tự động')
+            if data.get('birth_date') and data['birth_date']>effective:reasons.append('Ngày sinh sau ngày chốt mới')
+            if data.get('hire_date') and data['hire_date']>effective:reasons.append('Ngày vào làm sau ngày chốt mới')
+            unchanged=e['effective']==effective
+            rows.append(dict(id=p['id'],version=p['version'],event=e['id'],code=p['code'],name=data['name'],old_effective=e['effective'],new_effective=effective,eligible=not reasons and not unchanged,unchanged=unchanged,blocked_reasons=reasons))
+        return rows
+    @app.get('/api/hr/baselines')
+    @auth(('admin','editor'))
+    def baseline_sources():
+        with db() as c:
+            return jsonify([dict(r) for r in c.execute('SELECT b.id,b.name,count(p.id) AS people FROM books b JOIN hr_people p ON p.source_book=b.id GROUP BY b.id,b.name ORDER BY b.created DESC')])
+    @app.get('/api/hr/import/<bid>/baseline')
+    @auth(('admin','editor'))
+    def preview_baseline(bid):
+        effective=read_date(request.args.get('effective'))
+        with lock:
+            b,_=book(bid)
+            with db() as c:rows=baseline_candidates(c,bid,effective)
+        return jsonify(book=bid,name=b['name'],revision=b['revision'],effective=effective,rows=rows,eligible=sum(r['eligible'] for r in rows),blocked=sum(bool(r['blocked_reasons']) for r in rows),unchanged=sum(r['unchanged'] and not r['blocked_reasons'] for r in rows))
+    @app.post('/api/hr/import/<bid>/baseline')
+    @auth(('admin','editor'))
+    def correct_baseline(bid):
+        d=request.get_json() or {};effective=read_date(d.get('effective'));reason=string(d,'reason',True);selected=d.get('selected')
+        if d.get('confirmed') is not True:fail('Cần xác nhận đây là ngày chốt thực tế của tệp nguồn.')
+        if not isinstance(selected,list) or not 1<=len(selected)<=1000 or any(not isinstance(x,dict) or not isinstance(x.get('id'),str) for x in selected):fail('Xem trước và chọn hồ sơ đủ điều kiện sửa ngày chốt.')
+        if len({x['id'] for x in selected})!=len(selected):fail('Danh sách bị lặp hồ sơ.')
+        with lock:
+            b,_=book(bid)
+            if d.get('revision')!=b['revision']:abort(409,'Tệp nguồn đã đổi; xem trước lại ngày chốt.')
+            with db() as c:
+                candidates={x['id']:x for x in baseline_candidates(c,bid,effective)}
+                for item in selected:
+                    row=candidates.get(item['id'])
+                    if not row or not row['eligible'] or item.get('version')!=row['version'] or item.get('event')!=row['event']:abort(409,'Một hồ sơ vừa thay đổi hoặc không đủ điều kiện; chưa sửa hồ sơ nào. Xem trước lại.')
+                    c.execute('INSERT INTO hr_baseline_revisions(person,event,book,old_effective,new_effective,reason,actor,stamp) VALUES(?,?,?,?,?,?,?,?)',(row['id'],row['event'],bid,row['old_effective'],effective,reason,session['user'],datetime.now().isoformat()))
+                    c.execute('UPDATE hr_events SET effective=? WHERE id=?',(effective,row['event']))
+                    c.execute('UPDATE hr_people SET version=version+1 WHERE id=?',(row['id'],))
+                    c.execute('UPDATE hr_source_evidence SET observed_date=? WHERE person=?',(effective,row['id']))
+                audit(c,'hr_baseline_date_corrected',dict(book=bid,count=len(selected),effective=effective,reason=reason))
+        return jsonify(updated=len(selected),effective=effective)
     def decision_data(c,d):
         kind=d.get('kind')
         if kind not in KINDS:fail('Loại quyết định không hợp lệ.')
@@ -421,7 +473,8 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
                 state='no_active';message='Không có hồ sơ ở trạng thái đang làm tại ngày cuối kỳ đã chọn. Kiểm tra ngày hiệu lực và trạng thái trong hồ sơ nếu số 0 chưa đúng thực tế.'
             else:
                 state='ready';message='Đã tổng hợp '+str(len(active))+' hồ sơ đang làm tại ngày '+end+'.'
-            readiness=dict(state=state,message=message,total_people=len(people),effective_people=len(rows),review_count=len(review),first_effective=first_effective,source_books=source_count)
+            baseline_sources=[dict(x) for x in c.execute('SELECT DISTINCT b.id,b.name FROM books b JOIN hr_people p ON p.source_book=b.id ORDER BY b.name')]
+            readiness=dict(baseline_sources=baseline_sources,state=state,message=message,total_people=len(people),effective_people=len(rows),review_count=len(review),first_effective=first_effective,source_books=source_count)
             return dict(start=start,end=end,scheme=scheme,readiness=readiness,total=len(active),female=sum(r['gender']=='female' for r in active),review_count=len(review),technical=sum(r['job']['technical'] for r in active),groups=counts(lambda r:GROUPS[r['job']['labor_group']]),education=counts(lambda r:EDUCATION[r['education']]),ages=counts(lambda r:r['age_group']),grades=dict(sorted(Counter(str(r['job']['grade'] or 'Chưa xác định') for r in active if r['job']['technical']).items())),units=[dict(unit=k,**v) for k,v in sorted(units.items())],people=rows,movements=moves,warnings=warnings)
     def report_args():
         start=read_date(request.args.get('start',today().replace(day=1).isoformat()));end=read_date(request.args.get('end',today().isoformat()));scheme=request.args.get('scheme','standard')
@@ -436,7 +489,7 @@ def register_hr(app, db, lock, auth, audit, book, patches, root):
     def report_export():
         with lock:d=build_report(*report_args())
         w=Workbook();s=w.active;s.title='Tổng hợp nội bộ'
-        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.3.2']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
+        s.append(['BÁO CÁO TỔNG HỢP NỘI BỘ — BẢN THỬ 0.3.3']);s.append(['Từ',d['start'],'Đến',d['end']]);s.append(['Đang làm',d['total'],'Nữ',d['female'],'CNKT',d['technical'],'Cần rà soát',d['review_count']])
         s.append(['Tình trạng dữ liệu',d['readiness']['message']])
         for warning in d['warnings']:s.append(['Lưu ý',warning])
         for key,title in [('groups','Nhóm lao động'),('education','Trình độ'),('ages','Nhóm tuổi'),('grades','Bậc CNKT')]:

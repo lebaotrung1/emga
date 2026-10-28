@@ -170,7 +170,7 @@ def main(argv=None):
     global DIAGNOSTIC_LOG
     DIAGNOSTIC_LOG=root/'emga-khoi-dong.log'
     emit('\n===== '+datetime.now().isoformat(timespec='seconds')+' | '+('chan doan' if args.diagnose else 'sua moi truong' if args.repair else 'khoi dong')+' =====')
-    emit('Emga 0.3.2 | Python '+sys.version.split()[0])
+    emit('Emga 0.3.3 | Python '+sys.version.split()[0])
     emit('Python goc: '+sys.executable)
     emit('Nhat ky chan doan: '+str(DIAGNOSTIC_LOG))
     try:
