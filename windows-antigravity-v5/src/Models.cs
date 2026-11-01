@@ -293,6 +293,9 @@ namespace CiscoLDTLApp
         public double SanLuongPhuKL { get; set; }
         public double SanLuongPhuDonGia { get; set; }
         public double SanLuongPhuTT { get; set; }
+        public bool CauPhoiDaApDung { get; set; }
+        public double CauPhoiKhoanKhac { get; set; }
+        public CraneStage[] CauPhoi { get; private set; }
 
         public double TongLuongToanPX { get; set; }
         public double TongLuongTT { get; set; }
@@ -359,6 +362,7 @@ namespace CiscoLDTLApp
 
         public WorkshopData()
         {
+            CauPhoi = CranePayroll.CreateStages();
             ListNhanVien = new List<EmployeeRecord>();
             ThanhPhanTCHC = new List<ThanhPhanItem>();
             ThanhPhanPX = new List<ThanhPhanItem>();

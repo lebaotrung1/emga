@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.4";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.5";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,17 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.4)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.5)");
+            crane.Click += (sender, args) => {
+                if (_workshops == null || _currentIndex < 0) return;
+                CommitAllGridEdits();
+                SaveUIToCurrentWorkshop();
+                var ws = _workshops[_currentIndex];
+                if (ws.MaPX != "LT") { MessageBox.Show("Chọn PX Luyện thép để nhập lương cẩu phôi."); return; }
+                using (var form = new CranePayrollForm(ws))
+                    if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
+            };
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.5)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -263,6 +273,7 @@ namespace CiscoLDTLApp
                     }
             };
             payrollMenu.Items.Add(management);
+            payrollMenu.Items.Add(crane);
             Controls.Add(payrollMenu);
             payrollMenu.BringToFront();
 
@@ -1128,6 +1139,7 @@ namespace CiscoLDTLApp
             txtSLLe.Text = WordReportService.FmtDec(ws.SanLuongLe, 3);
             txtDGLe.Text = WordReportService.FmtDec(ws.DonGiaLe, 2);
             txtTTLe.Text = WordReportService.FmtInt(ws.ThanhTienLe);
+            txtSanLuongPhuName.ReadOnly = txtSLPhuKL.ReadOnly = txtSLPhuTT.ReadOnly = ws.CauPhoiDaApDung;
             txtSanLuongPhuName.Text = ws.SanLuongPhuName;
             txtSLPhuKL.Text = WordReportService.FmtDec(ws.SanLuongPhuKL, 2);
             txtSLPhuTT.Text = WordReportService.FmtInt(ws.SanLuongPhuTT);
@@ -1484,9 +1496,9 @@ namespace CiscoLDTLApp
             ws.SanLuongLe = ParseVN(txtSLLe.Text);
             ws.DonGiaLe = ParseVN(txtDGLe.Text);
             ws.ThanhTienLe = ParseVN(txtTTLe.Text);
-            ws.SanLuongPhuName = txtSanLuongPhuName.Text.Trim();
-            ws.SanLuongPhuKL = ParseVN(txtSLPhuKL.Text);
-            ws.SanLuongPhuTT = ParseVN(txtSLPhuTT.Text);
+            if (!ws.CauPhoiDaApDung) ws.SanLuongPhuName = txtSanLuongPhuName.Text.Trim();
+            if (!ws.CauPhoiDaApDung) ws.SanLuongPhuKL = ParseVN(txtSLPhuKL.Text);
+            if (!ws.CauPhoiDaApDung) ws.SanLuongPhuTT = ParseVN(txtSLPhuTT.Text);
             ws.LyDoTruLuong = txtLyDoTruLuong.Text.Trim();
 
             if (dgvTienLuong.Rows.Count >= 15)

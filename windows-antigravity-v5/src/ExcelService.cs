@@ -546,6 +546,14 @@ namespace CiscoLDTLApp
                     lt.ThanhTienLe = Math.Round(GetCellDouble(doc, ss, "J43", lt.ThanhTienLe), 0);
                     lt.SanLuongPhuKL = Math.Round(GetCellDouble(doc, ss, "D44", lt.SanLuongPhuKL), 2);
                     lt.SanLuongPhuTT = Math.Round(GetCellDouble(doc, ss, "J44", lt.SanLuongPhuTT), 0);
+                    // Ba công đoạn thường D50:D52; lễ D46:D48 đã tách khỏi sản lượng thường.
+                    for(int i=0;i<3;i++) {
+                        lt.CauPhoi[i].Regular=GetCellDouble(doc,ss,"D"+(50+i),0);
+                        lt.CauPhoi[i].Holiday=GetCellDouble(doc,ss,"D"+(46+i),0);
+                        lt.CauPhoi[i].Rate=GetCellDouble(doc,ss,"I"+(50+i),0);
+                    }
+                    for(int row=55;row<=58;row++) lt.CauPhoiKhoanKhac+=GetCellDouble(doc,ss,"J"+row,0);
+
 
                     lt.TongLuongTT = Math.Round(GetCellDouble(doc, ss, "J34", lt.TongLuongTT), 0);
                     lt.LuongSPTT = Math.Round(GetCellDouble(doc, ss, "J35", lt.LuongSPTT), 0);
@@ -675,6 +683,7 @@ namespace CiscoLDTLApp
             {
                 LoadAdditionalEmployees(zip, workshops);
                 LoadManagementProductionSettings(zip, workshops);
+                LoadCranePayroll(zip, workshops);
                 LoadEditedGnv(zip, workshops);
             }
             return workshops;
@@ -1126,6 +1135,29 @@ namespace CiscoLDTLApp
                         SetCellNumeric(doc, "J43", ws.ThanhTienLe);
                         SetCellNumeric(doc, "D44", ws.SanLuongPhuKL);
                         SetCellNumeric(doc, "J44", ws.SanLuongPhuTT);
+                        if(ws.CauPhoiDaApDung) {
+                            SetCellInlineString(doc,"C44","tấn công đoạn",false);
+                            double regularTotal=0, holidayTotal=0, regularQuantity=0;
+                            for(int i=0;i<3;i++) {
+                                var stage=ws.CauPhoi[i];
+                                SetCellInlineString(doc,"B"+(50+i),stage.Name,false);
+                                SetCellInlineString(doc,"B"+(46+i),stage.Name+" (ngày lễ)",false);
+                                double regular=stage.Regular*stage.Rate;
+                                double holiday=stage.Amount-regular;
+                                SetCellNumeric(doc,"D"+(50+i),stage.Regular,false);
+                                SetCellNumeric(doc,"I"+(50+i),stage.Rate,false);
+                                SetCraneFormula(doc,"J"+(50+i),"D"+(50+i)+"*I"+(50+i),regular);
+                                SetCellNumeric(doc,"D"+(46+i),stage.Holiday,false);
+                                SetCellNumeric(doc,"I"+(46+i),stage.Rate*2,false);
+                                SetCraneFormula(doc,"J"+(46+i),"D"+(46+i)+"*I"+(46+i),holiday);
+                                regularTotal+=regular; holidayTotal+=holiday; regularQuantity+=stage.Regular;
+                            }
+                            SetCraneFormula(doc,"D49","SUM(D50:D52)",regularQuantity);
+                            SetCraneFormula(doc,"J49","SUM(J50:J52)",regularTotal);
+                            SetCraneFormula(doc,"J45","SUM(J46:J48)",holidayTotal);
+                            // J55:J58 không thuộc ba công đoạn, giữ nguyên dữ liệu/công thức nguồn.
+                        }
+
 
                         SetCellNumeric(doc, "J34", ws.TongLuongTT);
                         SetCellNumeric(doc, "J35", ws.LuongSPTT);
@@ -1247,6 +1279,7 @@ namespace CiscoLDTLApp
                 // Bật cờ fullCalcOnLoad="1" trong xl/workbook.xml để khi mở bằng Excel, mọi công thức tự động tính toán lại 100%
                 SaveAdditionalEmployees(zip, workshops);
                 SaveManagementProductionSettings(zip, workshops);
+                SaveCranePayroll(zip, workshops);
                 SaveEditedGnv(zip, workshops);
                 SaveManagementPayrollReport(zip, workshops);
                 EnsureFullCalcOnLoad(zip);
@@ -1377,6 +1410,63 @@ namespace CiscoLDTLApp
                 }
             }
             foreach(var ws in workshops) if(seen.Contains(ws.MaPX)) ws.RecalculateDerived();
+        }
+
+        private static void SetCraneFormula(XmlDocument doc, string address, string formula, double amount)
+        {
+            SetCellNumeric(doc,address,amount,false);
+            var cell=GetSheetIndex(doc).Cells[address];
+            var node=doc.CreateElement("f",NsMain); node.InnerText=formula;
+            cell.PrependChild(node);
+        }
+
+        private static void SaveCranePayroll(ZipArchive zip, List<WorkshopData> workshops)
+        {
+            foreach(var ws in workshops)
+            {
+                if(ws.MaPX!="LT" || !ws.CauPhoiDaApDung) continue;
+                string path=EnsureWorksheet(zip,"Cau phoi v5","xl/worksheets/ciscoCranePayroll.xml");
+                var doc=new XmlDocument(); doc.LoadXml("<worksheet xmlns='"+NsMain+"'><sheetData/></worksheet>");
+                string[] headers={"Công đoạn","SL thường (không gồm lễ)","SL lễ","Đơn giá (đồng/ĐVT)","Thành tiền (đồng)"};
+                for(int col=0;col<headers.Length;col++) SetCellInlineString(doc,TimesheetImporter.ColName(col+1)+"1",headers[col],false);
+                for(int i=0;i<3;i++)
+                {
+                    string row=(i+2).ToString(); var stage=ws.CauPhoi[i];
+                    SetCellInlineString(doc,"A"+row,stage.Name,false);
+                    SetCellNumeric(doc,"B"+row,stage.Regular,false); SetCellNumeric(doc,"C"+row,stage.Holiday,false);
+                    SetCellNumeric(doc,"D"+row,stage.Rate,false); SetCellNumeric(doc,"E"+row,stage.Amount,false);
+                }
+                SetCellInlineString(doc,"A5","Tổng quỹ cẩu phôi (đã nằm trong lương SP trực tiếp)",false);
+                SetCellNumeric(doc,"E5",ws.SanLuongPhuTT,false);
+                SaveSheetXml(zip,path,doc);
+            }
+        }
+
+        private static void LoadCranePayroll(ZipArchive zip, List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip); string path;
+            if(!map.TryGetValue("Cau phoi v5",out path)) return;
+            var doc=LoadSheetXml(zip,path); var strings=LoadSharedStrings(zip);
+            foreach(var ws in workshops)
+            {
+                if(ws.MaPX!="LT") continue;
+                var stages=CranePayroll.CreateStages();
+                for(int i=0;i<3;i++) {
+                    string row=(i+2).ToString();
+                    stages[i].Regular=GetCellDouble(doc,strings,"B"+row,0);
+                    stages[i].Holiday=GetCellDouble(doc,strings,"C"+row,0);
+                    stages[i].Rate=GetCellDouble(doc,strings,"D"+row,0);
+                }
+                // Đọc nguyên độ chính xác của quỹ v5.5, tránh bộ đọc NT cũ làm tròn mất phần lẻ.
+                string ntPath;
+                if(map.TryGetValue("NT Thép",out ntPath)) {
+                    var nt=LoadSheetXml(zip,ntPath);
+                    ws.LuongSPTT=GetCellDouble(nt,strings,"J35",ws.LuongSPTT);
+                    ws.SanLuongPhuTT=GetCellDouble(nt,strings,"J44",ws.SanLuongPhuTT);
+                }
+                // J44 đã chứa tổng cũ; Apply chỉ thay chênh lệch, không cộng lần hai.
+                CranePayroll.Apply(ws,stages,false);
+            }
         }
 
         private static void SaveManagementProductionSettings(ZipArchive zip, List<WorkshopData> workshops)
@@ -2163,6 +2253,10 @@ namespace CiscoLDTLApp
             dst.ThanhTienLe = src.ThanhTienLe;
             dst.SanLuongPhuKL = src.SanLuongPhuKL;
             dst.SanLuongPhuTT = src.SanLuongPhuTT;
+            dst.SanLuongPhuName = src.SanLuongPhuName;
+            dst.CauPhoiDaApDung = src.CauPhoiDaApDung;
+            dst.CauPhoiKhoanKhac = src.CauPhoiKhoanKhac;
+            for(int i=0;i<3;i++) { dst.CauPhoi[i].Regular=src.CauPhoi[i].Regular; dst.CauPhoi[i].Holiday=src.CauPhoi[i].Holiday; dst.CauPhoi[i].Rate=src.CauPhoi[i].Rate; }
             dst.TongLuongToanPX = src.TongLuongToanPX;
             dst.TongLuongTT = src.TongLuongTT;
             dst.LuongSPTT = src.LuongSPTT;

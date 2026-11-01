@@ -124,6 +124,7 @@ namespace CiscoLDTLApp
             sb.AppendLine();
             sb.AppendLine("2. Tiền lương, ăn ca thực hiện:");
             sb.AppendLine("2.1. Tiền lương:");
+            foreach(var line in CranePayroll.ReportLines(ws)) sb.AppendLine(line);
             if (ws.MaPX != "CDNL" && ws.SanLuongTH > 0)
             {
                 sb.AppendLine(string.Format("- Sản lượng thực hiện ({0}): Kế hoạch tháng: {1} {2}; Thực hiện tháng {3}: {4} {5} (Sản lượng tính lương: {6} {7}, trong đó Loại 1: {8} {9}, Loại 2: {10} {11}, làm ngày Lễ: {12} {13}).", ws.TenSanPhamChinh, FmtDec(ws.SanLuongKH, 2), ws.DvtSanPham, ws.Thang, FmtDec(ws.SanLuongTH, 3), ws.DvtSanPham, FmtDec(ws.SanLuongTinhLuong, 3), ws.DvtSanPham, FmtDec(ws.SanLuongLoai1, 3), ws.DvtSanPham, FmtDec(ws.SanLuongLoai2, 3), ws.DvtSanPham, FmtDec(ws.SanLuongLe, 3), ws.DvtSanPham));
@@ -462,6 +463,7 @@ namespace CiscoLDTLApp
             body.Append(P("2. Tiền lương, ăn ca thực hiện:", true, false, "both", 60, 40, 26, 420));
             body.Append(P("2.1. Tiền lương", true, true, "both", 20, 20, 26, 420));
 
+            foreach(var line in CranePayroll.ReportLines(ws)) body.Append(P(line, false, false, "both", 20, 20, 26, 420));
             if (ws.MaPX != "CDNL" && ws.SanLuongTH > 0)
             {
                 if (!isMultiPeriod)
@@ -473,7 +475,7 @@ namespace CiscoLDTLApp
                     body.Append(P(string.Format("- Sản lượng {0} thực hiện: Tháng {1}: {2} {3}; {4}: {5} {6}; {7} năm {8}: {9} {10}.", ws.TenSanPhamChinh, ws.Thang, FmtDec(ws.SanLuongTH, 2), ws.DvtSanPham, tenQuy, FmtDec(ws.KyQuy.SanLuongTH, 2), ws.DvtSanPham, tenLK, ws.Nam, FmtDec(ws.KyLuyKe.SanLuongTH, 2), ws.DvtSanPham), false, false, "both", 20, 20, 26, 420));
                     body.Append(P(string.Format("- Sản lượng {0} tính lương: Tháng {1}: {2} {3} (Loại I: {4} {5}; Loại II: {6} {7}; Ngày lễ: {8} {9}); {10}: {11} {12}; {13} năm {14}: {15} {16}.", ws.TenSanPhamChinh, ws.Thang, FmtDec(ws.SanLuongTinhLuong, 2), ws.DvtSanPham, FmtDec(ws.SanLuongLoai1, 2), ws.DvtSanPham, FmtDec(ws.SanLuongLoai2, 2), ws.DvtSanPham, FmtDec(ws.SanLuongLe, 2), ws.DvtSanPham, tenQuy, FmtDec(ws.KyQuy.SanLuongTinhLuong, 2), ws.DvtSanPham, tenLK, ws.Nam, FmtDec(ws.KyLuyKe.SanLuongTinhLuong, 2), ws.DvtSanPham), false, false, "both", 20, 20, 26, 420));
                 }
-                if (!string.IsNullOrEmpty(ws.SanLuongPhuName) && ws.SanLuongPhuKL > 0)
+                if (!ws.CauPhoiDaApDung && !string.IsNullOrEmpty(ws.SanLuongPhuName) && ws.SanLuongPhuKL > 0)
                 {
                     body.Append(P(string.Format("+ Khối lượng {0}: {1} {2}, thành tiền: {3} triệu đồng.", ws.SanLuongPhuName, FmtDec(ws.SanLuongPhuKL, 2), ws.DvtSanPham, FmtMoney(ws.SanLuongPhuTT)), false, false, "both", 20, 20, 26, 560));
                 }

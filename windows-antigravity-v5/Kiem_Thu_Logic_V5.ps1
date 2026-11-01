@@ -23,4 +23,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'GNV test build failed' }
     & .\GnvCalculationTests.exe
     if ($LASTEXITCODE -ne 0) { throw 'GNV tests failed' }
+    & $csc /nologo /target:exe /out:CranePayrollTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /reference:System.Windows.Forms.dll tests/CranePayrollTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Crane payroll test build failed' }
+    & .\CranePayrollTests.exe
+    if ($LASTEXITCODE -ne 0) { throw 'Crane payroll tests failed' }
 } finally { Pop-Location }

@@ -1,3 +1,27 @@
+# Antigravity v5.5 — lương cẩu phôi PX Thép
+
+Tải `antigravity_v5_5_program_only.zip` trên nhánh `antigravity-payroll-v5`. Đóng chương trình, sao lưu Excel, giải nén và thay EXE/launcher; giữ nguyên Data và Templates. Tiêu đề là v5.5, phiên bản EXE 5.5.0.0. Gói chỉ chứa chương trình, mã nguồn, hướng dẫn và kiểm thử; không có dữ liệu người dùng.
+
+Chọn PX Thép, nạp Excel như trước, mở **LƯƠNG CẨU PHÔI PX THÉP (v5.5)**. Có ba công đoạn:
+
+1. Vận chuyển phôi từ SX đến xếp kiêu ngoài bãi.
+2. Xuất bán phôi từ kiêu ngoài bãi.
+3. Vệ sinh phôi, xuất bán hàng từ kho sản xuất.
+
+Mỗi dòng nhập SL thường **không gồm SL lễ**, SL lễ và đơn giá riêng; dùng dấu phẩy cho phần thập phân. Thành tiền = SL thường × đơn giá + SL lễ × đơn giá × 2. Sản lượng lễ chỉ tính trong phần lễ; không tự cộng sang sản lượng sản xuất hoặc sản lượng quản lý. Sản lượng cẩu phôi là khối lượng từng công đoạn, không phải tổng tấn sản phẩm duy nhất.
+
+Bấm **Áp dụng** để thay phần cẩu phôi cũ trong quỹ sản phẩm trực tiếp, cập nhật nghiệm thu và Word. Bấm **Lưu Excel** để lưu. Hủy cửa sổ không áp dụng đầu vào mới. Có thể sửa/xóa từng sản lượng hoặc đơn giá về 0; áp dụng lặp không cộng quỹ lần nữa.
+
+Ánh xạ Excel: thường D50:D52, lễ D46:D48, đơn giá I50:I52; J49/J45 là tổng thường/lễ. Các khoản khác tại J55:J58 được giữ, cộng một lần trong J44; tổng này nằm trong J35. Công thức cũ ở đầu vào thường đã trừ lễ được thay bằng SL thường đã tách, tránh trừ lễ lần nữa. Sáu ô thành tiền dùng công thức nhân trực tiếp theo yêu cầu mới. Sheet **Cau phoi v5** lưu chi tiết và đầu vào. Dòng tổng SP phụ/cẩu phôi ở màn hình chính chỉ đọc sau khi áp dụng, tránh nhập đè quỹ tính tự động.
+
+Word xem trước, xuất mới và cập nhật mẫu đều liệt kê ba công đoạn, SL thường/lễ, đơn giá đồng/ĐVT và tiền triệu đồng có đúng một số lẻ. Với kỳ quý/lũy kế, chi tiết cẩu phôi ghi rõ là **tháng**; tổng lương quý/lũy kế dùng cơ chế cộng nền hiện có.
+
+Giữ chức năng nạp công, quản lý theo sản lượng với đơn giá riêng, GNV tính lại theo công/khối lượng × đơn giá và Word triệu đồng của bản trước. Chỉ sửa ứng dụng antigravity; không sửa Nghiệm Thu Studio. Xem **RA_SOAT_CDNL.md** để biết công thức từng bộ phận và giới hạn tính lại liên sheet của CĐNL; không áp công thức cẩu phôi chung cho các bộ phận này.
+
+`Build.ps1` biên dịch trên Windows. `Kiem_Thu_Logic_V5.ps1` chạy các kiểm thử với dữ liệu giả. Kiểm thử Excel nguồn dùng bản sao ngoài repo; kiểm tra tính toán, lưu–mở lặp, giữ công thức CĐNL, nạp công, quản lý, GNV và xuất/cập nhật Word. Kiểm tra chạy trên Linux/Mono, chưa thử trực tiếp Windows.
+
+---
+
 # Ứng dụng Windows v5.4 — quỹ quản lý theo sản lượng và báo cáo Word triệu đồng
 
 Ứng dụng Windows riêng trong nhánh `antigravity-payroll-v5`; không thay ứng dụng Emga trên nhánh chính.
