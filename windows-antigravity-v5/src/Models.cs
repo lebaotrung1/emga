@@ -497,8 +497,8 @@ namespace CiscoLDTLApp
                     }
                     else
                     {
-                        if (sumDiemTT > 0 && quyLuongSPTT > 0)
-                            emp.LuongSanPham = Math.Round((quyLuongSPTT * emp.HeSoHuong / sumDiemTT) / 100.0, 0) * 100.0;
+                        emp.LuongSanPham = sumDiemTT > 0 && quyLuongSPTT > 0
+                            ? ManagementPayroll.RoundMoney(quyLuongSPTT * emp.HeSoHuong / sumDiemTT, 100) : 0;
                     }
                     emp.TongTienLuong = emp.LuongSanPham + emp.LuongLePhepCD + emp.LuongLamLe + emp.LuongHocVHTT + emp.PhuCapTien;
                 }
@@ -754,13 +754,6 @@ namespace CiscoLDTLApp
                     LuongCVKhac = sumGNVTien;
                 }
             }
-
-            if (SanLuongLoai1 > 0 && DonGiaLoai1 > 0)
-                ThanhTienLoai1 = Math.Round(SanLuongLoai1 * DonGiaLoai1, 0);
-            if (SanLuongLoai2 > 0 && DonGiaLoai2 > 0)
-                ThanhTienLoai2 = Math.Round(SanLuongLoai2 * DonGiaLoai2, 0);
-            if (SanLuongLe > 0 && DonGiaLe > 0)
-                ThanhTienLe = Math.Round(SanLuongLe * DonGiaLe, 0);
 
             BDDH_Muc1_Tien = BDDH_Muc1_Cong * 13000;
             BDDH_Muc2_Tien = BDDH_Muc2_Cong * 20000;

@@ -424,6 +424,8 @@ namespace CiscoLDTLApp
                     tk.DonGiaLoai1 = Math.Round(GetCellDouble(doc, ss, "I60", tk.DonGiaLoai1), 2);
                     tk.ThanhTienLoai1 = Math.Round(GetCellDouble(doc, ss, "J60", tk.ThanhTienLoai1), 0);
                     tk.SanLuongLoai2 = Math.Round(GetCellDouble(doc, ss, "D61", tk.SanLuongLoai2), 3);
+                    tk.DonGiaLoai2 = GetCellDouble(doc, ss, "I61", 0);
+                    tk.ThanhTienLoai2 = GetCellDouble(doc, ss, "J61", 0);
                     tk.SanLuongLe = Math.Round(GetCellDouble(doc, ss, "D63", tk.SanLuongLe), 3);
                     tk.DonGiaLe = Math.Round(GetCellDouble(doc, ss, "I63", tk.DonGiaLe), 2);
                     tk.ThanhTienLe = Math.Round(GetCellDouble(doc, ss, "J63", tk.ThanhTienLe), 0);
@@ -536,8 +538,11 @@ namespace CiscoLDTLApp
                     lt.DonGiaLoai1 = Math.Round(GetCellDouble(doc, ss, "I37", lt.DonGiaLoai1), 2);
                     lt.ThanhTienLoai1 = Math.Round(GetCellDouble(doc, ss, "J37", lt.ThanhTienLoai1), 0);
                     lt.SanLuongLoai2 = Math.Round(GetCellDouble(doc, ss, "D38", lt.SanLuongLoai2), 2);
+                    lt.DonGiaLoai2 = GetCellDouble(doc, ss, "I38", 0);
+                    lt.ThanhTienLoai2 = GetCellDouble(doc, ss, "J38", 0);
                     lt.ThanhTienLoai2 = Math.Round(GetCellDouble(doc, ss, "J38", lt.ThanhTienLoai2), 0);
                     lt.SanLuongLe = Math.Round(GetCellDouble(doc, ss, "D43", lt.SanLuongLe), 2);
+                    lt.DonGiaLe = GetCellDouble(doc, ss, "I43", 0);
                     lt.ThanhTienLe = Math.Round(GetCellDouble(doc, ss, "J43", lt.ThanhTienLe), 0);
                     lt.SanLuongPhuKL = Math.Round(GetCellDouble(doc, ss, "D44", lt.SanLuongPhuKL), 2);
                     lt.SanLuongPhuTT = Math.Round(GetCellDouble(doc, ss, "J44", lt.SanLuongPhuTT), 0);
@@ -986,6 +991,8 @@ namespace CiscoLDTLApp
                         SetCellNumeric(doc, "I60", ws.DonGiaLoai1);
                         SetCellNumeric(doc, "J60", ws.ThanhTienLoai1);
                         SetCellNumeric(doc, "D61", ws.SanLuongLoai2);
+                        SetCellNumeric(doc, "I61", ws.DonGiaLoai2);
+                        SetCellNumeric(doc, "J61", ws.ThanhTienLoai2);
                         SetCellNumeric(doc, "D63", ws.SanLuongLe);
                         SetCellNumeric(doc, "I63", ws.DonGiaLe);
                         SetCellNumeric(doc, "J63", ws.ThanhTienLe);
@@ -1108,8 +1115,10 @@ namespace CiscoLDTLApp
                         SetCellNumeric(doc, "I37", ws.DonGiaLoai1);
                         SetCellNumeric(doc, "J37", ws.ThanhTienLoai1);
                         SetCellNumeric(doc, "D38", ws.SanLuongLoai2);
+                        SetCellNumeric(doc, "I38", ws.DonGiaLoai2);
                         SetCellNumeric(doc, "J38", ws.ThanhTienLoai2);
                         SetCellNumeric(doc, "D43", ws.SanLuongLe);
+                        SetCellNumeric(doc, "I43", ws.DonGiaLe);
                         SetCellNumeric(doc, "J43", ws.ThanhTienLe);
                         SetCellNumeric(doc, "D44", ws.SanLuongPhuKL);
                         SetCellNumeric(doc, "J44", ws.SanLuongPhuTT);

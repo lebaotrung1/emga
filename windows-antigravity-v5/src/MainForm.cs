@@ -58,7 +58,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.1";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.2";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -247,7 +247,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.1)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.2)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -704,6 +704,15 @@ namespace CiscoLDTLApp
             grpSanLuong.Controls.Add(new Label { Text = "Ghi chú giảm trừ lương (nếu có):", Location = new Point(14, y4 + 3), AutoSize = true, Font = new Font("Segoe UI", 9f) });
             txtLyDoTruLuong = new TextBox { Location = new Point(215, y4), Width = 1040, Font = new Font("Segoe UI", 9f) };
 
+            txtTTLoai1.ReadOnly = txtTTLoai2.ReadOnly = txtTTLe.ReadOnly = true;
+            txtTTLoai1.BackColor = txtTTLoai2.BackColor = txtTTLe.BackColor = Color.FromArgb(235, 242, 248);
+            txtSLLoai1.TextChanged += (sender, args) => ProductionInputChanged(ProductionLine.Loai1);
+            txtDGLoai1.TextChanged += (sender, args) => ProductionInputChanged(ProductionLine.Loai1);
+            txtSLLoai2.TextChanged += (sender, args) => ProductionInputChanged(ProductionLine.Loai2);
+            txtDGLoai2.TextChanged += (sender, args) => ProductionInputChanged(ProductionLine.Loai2);
+            txtSLLe.TextChanged += (sender, args) => ProductionInputChanged(ProductionLine.NgayLe);
+            txtDGLe.TextChanged += (sender, args) => ProductionInputChanged(ProductionLine.NgayLe);
+
             grpSanLuong.Controls.AddRange(new Control[]
             {
                 txtTenSP, txtDvtSP, txtSLKeHoach, txtSLThucHien, txtSLTinhLuong,
@@ -789,6 +798,40 @@ namespace CiscoLDTLApp
             split.Panel2.Controls.Add(splitBottom);
 
             tab.Controls.Add(split);
+        }
+
+        private void ProductionInputChanged(ProductionLine line)
+        {
+            if (_isLoadingUI || _workshops == null || _currentIndex < 0) return;
+            TextBox quantity = line == ProductionLine.Loai1 ? txtSLLoai1 : line == ProductionLine.Loai2 ? txtSLLoai2 : txtSLLe;
+            TextBox price = line == ProductionLine.Loai1 ? txtDGLoai1 : line == ProductionLine.Loai2 ? txtDGLoai2 : txtDGLe;
+            double q, p;
+            if (!TryParseProductionNumber(quantity.Text, out q) || !TryParseProductionNumber(price.Text, out p))
+            { SetStatus("Sản lượng/đơn giá chưa hợp lệ. Nhập số không âm theo định dạng Việt Nam."); return; }
+            SaveUIToCurrentWorkshop();
+            var ws = _workshops[_currentIndex];
+            ProductionPayroll.UpdateLine(ws, line, q, p);
+            ws.RecalculateFromEmployees(true);
+            _isLoadingUI = true;
+            try
+            {
+                txtTTLoai1.Text = WordReportService.FmtInt(ws.ThanhTienLoai1);
+                txtTTLoai2.Text = WordReportService.FmtInt(ws.ThanhTienLoai2);
+                txtTTLe.Text = WordReportService.FmtInt(ws.ThanhTienLe);
+                RefreshSummaryGridsFromWorkshop(ws);
+                PopulateEmployeeGridRows();
+            }
+            finally { _isLoadingUI = false; }
+            RefreshPreview();
+            SetStatus("Đã tính lại thành tiền = sản lượng × đơn giá, quỹ SP và lương từng người. Chưa lưu Excel.");
+        }
+
+        private static bool TryParseProductionNumber(string text, out double value)
+        {
+            text = (text ?? "").Trim();
+            if (text == "") { value=0; return true; }
+            return double.TryParse(text.Replace(".", "").Replace(",", "."), NumberStyles.Number,
+                CultureInfo.InvariantCulture, out value) && value >= 0 && !double.IsNaN(value) && !double.IsInfinity(value);
         }
 
         private void BuildTab3(TabPage tab)

@@ -11,4 +11,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Framework compatibility test build failed' }
     & .\FrameworkCompatibilityTests.exe
     if ($LASTEXITCODE -ne 0) { throw 'Framework compatibility tests failed' }
+    & $csc /nologo /target:exe /out:ProductionPayrollTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.Windows.Forms.dll tests/ProductionPayrollTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Production payroll test build failed' }
+    & .\ProductionPayrollTests.exe
+    if ($LASTEXITCODE -ne 0) { throw 'Production payroll tests failed' }
 } finally { Pop-Location }
