@@ -11,7 +11,8 @@ namespace CiscoLDTLApp
         private WorkshopData original, draft;
         private List<EmployeeRecord> originals = new List<EmployeeRecord>();
         private DataGridView grid;
-        private NumericUpDown fund, adjustment;
+        private NumericUpDown fund, adjustment, price1, price2;
+        private Label holidayPrice, productionResult;
         private Label summary;
         private BindingSource source;
 
@@ -19,6 +20,11 @@ namespace CiscoLDTLApp
         {
             original = ws;
             draft = new WorkshopData { MaPX = ws.MaPX, LuongSPQL = ws.LuongSPQL, DieuChinhLuongQL = ws.DieuChinhLuongQL };
+            draft.SanLuongLoai1 = ws.SanLuongLoai1;
+            draft.SanLuongLoai2 = ws.SanLuongLoai2;
+            draft.SanLuongLe = ws.SanLuongLe;
+            ManagementProductionPayroll.CopySettings(ws, draft);
+            draft.TinhQuyQLTuSanLuong = true;
             draft.ListNhanVien.Clear();
             foreach (var e in ws.ListNhanVien)
                 if (e.LaQuanLy)
@@ -33,7 +39,7 @@ namespace CiscoLDTLApp
             Font = new Font("Segoe UI", 9);
             var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 75, Padding = new Padding(8), AutoScroll = true };
             top.Controls.Add(new Label { Text = "Quỹ SP quản lý (đ)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
-            fund = Money(Math.Max(0, ws.LuongSPQL), false); top.Controls.Add(fund);
+            fund = Money(0, false); fund.Enabled = false; fund.Maximum = 1000000000000000000000000000m; top.Controls.Add(fund);
             top.Controls.Add(new Label { Text = "Điều chỉnh chung (+/−)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
             adjustment = Money(ws.DieuChinhLuongQL, true); top.Controls.Add(adjustment);
             var calc = new Button { Text = "Tính / xem trước", AutoSize = true };
@@ -42,12 +48,48 @@ namespace CiscoLDTLApp
             apply.Click += (s,e) => Preview(true); top.Controls.Add(apply);
             var cancel = new Button { Text = "Đóng", AutoSize = true, CausesValidation = false };
             cancel.Click += (s,e) => Close(); top.Controls.Add(cancel);
-            var note = new Label { Dock = DockStyle.Top, Height = 120, Padding = new Padding(8), Text =
-                (string.IsNullOrEmpty(ws.CanhBaoQuyQuanLy) ? "Kiểm tra quỹ SP quản lý được duyệt trước khi phân bổ." : ws.CanhBaoQuyQuanLy) + "\n" +
+            var production = new TableLayoutPanel { Dock = DockStyle.Top, Height = 130, ColumnCount = 4, RowCount = 5, AutoScroll = true, Padding = new Padding(8) };
+            production.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 18));
+            production.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 24));
+            production.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 29));
+            production.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 29));
+            string[] headers = { "Quỹ quản lý theo sản lượng", "Sản lượng (từ bảng SX)", "Đơn giá quản lý (đ/ĐVT)", "Thành tiền (đ)" };
+            for (int i=0;i<4;i++) production.Controls.Add(new Label { Text=headers[i], AutoSize=true },i,0);
+            price1 = Money(ws.DonGiaQLLoai1, false); price1.DecimalPlaces = 4;
+            price2 = Money(ws.DonGiaQLLoai2, false); price2.DecimalPlaces = 4;
+            holidayPrice = new Label { AutoSize=true };
+            productionResult = new Label { AutoSize=true };
+            production.Controls.Add(new Label { Text="Loại 1",AutoSize=true },0,1);
+            production.Controls.Add(new Label { Text=WordReportService.FmtDec(ws.SanLuongLoai1,3),AutoSize=true },1,1);
+            production.Controls.Add(price1,2,1);
+            production.Controls.Add(new Label { Name="amount1",AutoSize=true },3,1);
+            production.Controls.Add(new Label { Text="Loại 2",AutoSize=true },0,2);
+            production.Controls.Add(new Label { Text=WordReportService.FmtDec(ws.SanLuongLoai2,3),AutoSize=true },1,2);
+            production.Controls.Add(price2,2,2);
+            production.Controls.Add(new Label { Name="amount2",AutoSize=true },3,2);
+            production.Controls.Add(new Label { Text="Ngày lễ",AutoSize=true },0,3);
+            production.Controls.Add(new Label { Text=WordReportService.FmtDec(ws.SanLuongLe,3),AutoSize=true },1,3);
+            production.Controls.Add(holidayPrice,2,3);
+            production.Controls.Add(new Label { Name="amountHoliday",AutoSize=true },3,3);
+            production.Controls.Add(productionResult,0,4); production.SetColumnSpan(productionResult,4);
+            EventHandler updateFund = (s,e) =>
+            {
+                draft.DonGiaQLLoai1=(double)price1.Value; draft.DonGiaQLLoai2=(double)price2.Value;
+                ManagementProductionPayroll.UpdateFund(draft);
+                fund.Value=(decimal)draft.LuongSPQL;
+                holidayPrice.Text=string.Format(System.Globalization.CultureInfo.GetCultureInfo("vi-VN"), "{0:#,##0.####} (= 2 × L1)", draft.DonGiaQLLe);
+                production.Controls["amount1"].Text=WordReportService.FmtInt(draft.ThanhTienQLLoai1);
+                production.Controls["amount2"].Text=WordReportService.FmtInt(draft.ThanhTienQLLoai2);
+                production.Controls["amountHoliday"].Text=WordReportService.FmtInt(draft.ThanhTienQLLe);
+                productionResult.Text="Tổng quỹ SP quản lý = tiền L1 + tiền L2 + tiền ngày lễ (làm tròn từng dòng đến đồng).";
+            };
+            price1.ValueChanged += updateFund; price2.ValueChanged += updateFund; updateFund(this,EventArgs.Empty);
+            var note = new Label { Dock = DockStyle.Top, Height = 115, Padding = new Padding(8), Text =
+                "Nhập đơn giá L1/L2; ngày lễ = 2 × L1. Muốn sửa sản lượng, đóng cửa sổ và sửa tại bảng sản xuất của phân xưởng.\n" +
                 "Chỉ gồm người được đánh dấu quản lý của phân xưởng đang chọn.\n" +
                 "Hệ số hưởng = ROUND(ROUND(Công SP × Hệ số / 26; 2) × Xếp loại; 2); A=100%, B=90%, C=80%. Lương SP phân bổ theo hệ số hưởng, làm tròn 100đ.\n" +
                 "Phép = Công phép × Lương BHXH / 26 (tròn 100đ); Học/họp 250.000đ/công; VHTT 300.000đ/công theo quy tắc bảng NT hiện có. Làm lễ và phụ cấp: nhập số tiền đã duyệt.\n" +
-                "Quỹ SP lấy từ bảng NT/nhập tay, không tự tính lại các công thức sản lượng hoặc liên kết ngoài. Điều chỉnh chung chỉ cộng ở tổng PX, chưa phân bổ cho cá nhân." };
+                "Quỹ SP tự tính từ ba dòng sản lượng × đơn giá quản lý; đơn giá này độc lập với đơn giá lao động trực tiếp. Điều chỉnh chung chỉ cộng ở tổng PX, chưa phân bổ cho cá nhân." };
             summary = new Label { Dock = DockStyle.Bottom, Height = 82, Padding = new Padding(8), Text = "Nhập số liệu, bấm Tính / xem trước. Chưa áp dụng hoặc ghi Excel." };
             grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false, AllowUserToAddRows = false, AllowUserToDeleteRows = false, RowHeadersVisible = false };
             Add("SDB", "SDB", true); Add("HoTen", "Họ tên", true, 180); Add("ChucDanh", "Chức danh", true, 120);
@@ -62,7 +104,7 @@ namespace CiscoLDTLApp
             source = new BindingSource { DataSource = new BindingList<EmployeeRecord>(draft.ListNhanVien) };
             grid.DataSource = source;
             grid.DataError += (s,e) => { e.ThrowException = false; e.Cancel = true; MessageBox.Show("Giá trị không hợp lệ. Hãy nhập số theo định dạng của Windows; xếp loại A/B/C."); };
-            Controls.Add(grid); Controls.Add(note); Controls.Add(top); Controls.Add(summary);
+            Controls.Add(grid); Controls.Add(note); Controls.Add(production); Controls.Add(top); Controls.Add(summary);
         }
         private static NumericUpDown Money(double value, bool signed)
         { return new NumericUpDown { Width = 155, Maximum = 1000000000000000m, Minimum = signed ? -1000000000000000m : 0, ThousandsSeparator = true, Value = (decimal)value }; }
@@ -75,7 +117,7 @@ namespace CiscoLDTLApp
                 if (!grid.EndEdit()) return;
                 source.EndEdit();
                 if (draft.ListNhanVien.Count == 0) throw new ArgumentException("Phân xưởng chưa có người được đánh dấu quản lý. Bổ sung/chỉnh hồ sơ trước.");
-                draft.LuongSPQL = (double)fund.Value; draft.DieuChinhLuongQL = (double)adjustment.Value;
+                draft.DieuChinhLuongQL = (double)adjustment.Value;
                 ManagementPayroll.Recalculate(draft);
                 source.ResetBindings(false);
                 double paid = 0, total = 0;
@@ -86,6 +128,7 @@ namespace CiscoLDTLApp
                 {
                     for (int i=0; i<originals.Count; i++)
                     { draft.ListNhanVien[i].QuanLyTinhMoi = true; ManagementPayroll.Copy(draft.ListNhanVien[i], originals[i]); }
+                    ManagementProductionPayroll.CopySettings(draft, original);
                     original.LuongSPQL = draft.LuongSPQL; original.LuongCheDoQL = draft.LuongCheDoQL;
                     original.DieuChinhLuongQL = draft.DieuChinhLuongQL;
                     ManagementPayroll.Recalculate(original);

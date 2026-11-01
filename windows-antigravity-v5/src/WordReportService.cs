@@ -47,10 +47,20 @@ namespace CiscoLDTLApp
             }
         }
 
+        public static string FmtMoney(double dong)
+        {
+            decimal millions = (decimal)dong / 1000000m;
+            return Math.Round(millions, 1, MidpointRounding.AwayFromZero).ToString("#,##0.0", ViCulture);
+        }
+
+        public static string FmtMoneyFromThousands(double thousands)
+        { return FmtMoney(thousands * 1000); }
+
         public static string GeneratePreviewText(WorkshopData ws)
         {
             ws.RecalculateDerived();
             var sb = new StringBuilder();
+            sb.AppendLine("Đơn vị các khoản tiền: triệu đồng (1 chữ số thập phân); đơn giá ghi riêng bằng đồng/đơn vị.");
             bool isMultiPeriod = ws.LoaiKy != LoaiKyBaoCao.ThangThuong;
             string tenQuy = ws.KyQuy != null && !string.IsNullOrEmpty(ws.KyQuy.TenKy) ? ws.KyQuy.TenKy : "Quý III";
             string tenLK = ws.KyLuyKe != null && !string.IsNullOrEmpty(ws.KyLuyKe.TenKy) ? ws.KyLuyKe.TenKy : "9 tháng";
@@ -124,36 +134,36 @@ namespace CiscoLDTLApp
             }
             else if (ws.MaPX == "CDNL")
             {
-                sb.AppendLine(string.Format("- Quỹ lương sản phẩm các phân xưởng chính làm cơ sở tính lương tháng {0}: {1} đồng.", ws.Thang, FmtInt(ws.SanLuongTH)));
+                sb.AppendLine(string.Format("- Quỹ lương sản phẩm các phân xưởng chính làm cơ sở tính lương tháng {0}: {1} triệu đồng.", ws.Thang, FmtMoney(ws.SanLuongTH)));
             }
 
             if (!isMultiPeriod)
             {
-                sb.AppendLine(string.Format("- Tổng quỹ tiền lương toàn Phân xưởng tháng {0}/{1}: {2} đồng. Trong đó:", ws.Thang, ws.Nam, FmtInt(ws.TongLuongToanPX)));
-                sb.AppendLine(string.Format("  * Tiền lương lao động trực tiếp: {0} đồng, gồm:", FmtInt(ws.TongLuongTT)));
-                sb.AppendLine(string.Format("    + Tiền lương sản phẩm trực tiếp: {0} đồng.", FmtInt(ws.LuongSPTT)));
+                sb.AppendLine(string.Format("- Tổng quỹ tiền lương toàn Phân xưởng tháng {0}/{1}: {2} triệu đồng. Trong đó:", ws.Thang, ws.Nam, FmtMoney(ws.TongLuongToanPX)));
+                sb.AppendLine(string.Format("  * Tiền lương lao động trực tiếp: {0} triệu đồng, gồm:", FmtMoney(ws.TongLuongTT)));
+                sb.AppendLine(string.Format("    + Tiền lương sản phẩm trực tiếp: {0} triệu đồng.", FmtMoney(ws.LuongSPTT)));
                 if (ws.LuongCVKhac > 0)
-                    sb.AppendLine(string.Format("    + Tiền lương công việc khác (GNV): {0} đồng ({1} công).", FmtInt(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1)));
+                    sb.AppendLine(string.Format("    + Tiền lương công việc khác (GNV): {0} triệu đồng ({1} công).", FmtMoney(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1)));
                 if (ws.TruLuong < 0)
-                    sb.AppendLine(string.Format("    + Giảm trừ tiền lương: {0} đồng ({1}).", FmtInt(ws.TruLuong), ws.LyDoTruLuong));
-                sb.AppendLine(string.Format("    + Tiền lương chế độ (lễ, phép, học): {0} đồng.", FmtInt(ws.LuongCheDoTT)));
-                sb.AppendLine(string.Format("  * Tiền lương lao động quản lý: {0} đồng (Lương SP: {1} đồng; Lương chế độ: {2} đồng).", FmtInt(ws.TongLuongQL), FmtInt(ws.LuongSPQL), FmtInt(ws.LuongCheDoQL)));
+                    sb.AppendLine(string.Format("    + Giảm trừ tiền lương: {0} triệu đồng ({1}).", FmtMoney(ws.TruLuong), ws.LyDoTruLuong));
+                sb.AppendLine(string.Format("    + Tiền lương chế độ (lễ, phép, học): {0} triệu đồng.", FmtMoney(ws.LuongCheDoTT)));
+                sb.AppendLine(string.Format("  * Tiền lương lao động quản lý: {0} triệu đồng (Lương SP: {1} triệu đồng; Lương chế độ: {2} triệu đồng).", FmtMoney(ws.TongLuongQL), FmtMoney(ws.LuongSPQL), FmtMoney(ws.LuongCheDoQL)));
             }
             else
             {
-                sb.AppendLine(string.Format("- Tổng tiền lương toàn Phân xưởng: Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng. Trong đó:", ws.Thang, FmtInt(ws.TongLuongToanPX), tenQuy, FmtInt(ws.KyQuy.TongLuongToanPX), tenLK, FmtInt(ws.KyLuyKe.TongLuongToanPX)));
-                sb.AppendLine(string.Format("  * Tiền lương lao động trực tiếp: Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng:", ws.Thang, FmtInt(ws.TongLuongTT), tenQuy, FmtInt(ws.KyQuy.TongLuongTT), tenLK, FmtInt(ws.KyLuyKe.TongLuongTT)));
-                sb.AppendLine(string.Format("    + Lương sản phẩm: Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng.", ws.Thang, FmtInt(ws.LuongSPTT), tenQuy, FmtInt(ws.KyQuy.LuongSPTT), tenLK, FmtInt(ws.KyLuyKe.LuongSPTT)));
+                sb.AppendLine(string.Format("- Tổng tiền lương toàn Phân xưởng: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng. Trong đó:", ws.Thang, FmtMoney(ws.TongLuongToanPX), tenQuy, FmtMoney(ws.KyQuy.TongLuongToanPX), tenLK, FmtMoney(ws.KyLuyKe.TongLuongToanPX)));
+                sb.AppendLine(string.Format("  * Tiền lương lao động trực tiếp: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng:", ws.Thang, FmtMoney(ws.TongLuongTT), tenQuy, FmtMoney(ws.KyQuy.TongLuongTT), tenLK, FmtMoney(ws.KyLuyKe.TongLuongTT)));
+                sb.AppendLine(string.Format("    + Lương sản phẩm: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.LuongSPTT), tenQuy, FmtMoney(ws.KyQuy.LuongSPTT), tenLK, FmtMoney(ws.KyLuyKe.LuongSPTT)));
                 if (ws.LuongCVKhac > 0 || ws.KyQuy.LuongCVKhac > 0 || ws.KyLuyKe.LuongCVKhac > 0)
-                    sb.AppendLine(string.Format("    + Lương công việc khác (GNV): Tháng {0}: {1} đồng ({2} công); {3}: {4} đồng ({5} công); {6}: {7} đồng ({8} công).", ws.Thang, FmtInt(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1), tenQuy, FmtInt(ws.KyQuy.LuongCVKhac), FmtDec(ws.KyQuy.CongCVKhac, 1), tenLK, FmtInt(ws.KyLuyKe.LuongCVKhac), FmtDec(ws.KyLuyKe.CongCVKhac, 1)));
+                    sb.AppendLine(string.Format("    + Lương công việc khác (GNV): Tháng {0}: {1} triệu đồng ({2} công); {3}: {4} triệu đồng ({5} công); {6}: {7} triệu đồng ({8} công).", ws.Thang, FmtMoney(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1), tenQuy, FmtMoney(ws.KyQuy.LuongCVKhac), FmtDec(ws.KyQuy.CongCVKhac, 1), tenLK, FmtMoney(ws.KyLuyKe.LuongCVKhac), FmtDec(ws.KyLuyKe.CongCVKhac, 1)));
                 if (ws.KyLuyKe.LuongTDT > 0)
-                    sb.AppendLine(string.Format("    + Lương công Trung đại tu (TĐT): {0}: {1} đồng ({2} công).", tenLK, FmtInt(ws.KyLuyKe.LuongTDT), FmtDec(ws.KyLuyKe.CongTDT, 1)));
+                    sb.AppendLine(string.Format("    + Lương công Trung đại tu (TĐT): {0}: {1} triệu đồng ({2} công).", tenLK, FmtMoney(ws.KyLuyKe.LuongTDT), FmtDec(ws.KyLuyKe.CongTDT, 1)));
                 if (ws.TruLuong < 0)
-                    sb.AppendLine(string.Format("    + Trừ lương trong kỳ: {0} đồng ({1}).", FmtInt(ws.TruLuong), ws.LyDoTruLuong));
-                sb.AppendLine(string.Format("    + Lương chế độ (lễ, phép, học): Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng.", ws.Thang, FmtInt(ws.LuongCheDoTT), tenQuy, FmtInt(ws.KyQuy.LuongCheDoTT), tenLK, FmtInt(ws.KyLuyKe.LuongCheDoTT)));
-                sb.AppendLine(string.Format("  * Tiền lương lao động quản lý: Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng.", ws.Thang, FmtInt(ws.TongLuongQL), tenQuy, FmtInt(ws.KyQuy.TongLuongQL), tenLK, FmtInt(ws.KyLuyKe.TongLuongQL)));
-                sb.AppendLine(string.Format("    + Lương sản phẩm QL: Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng.", ws.Thang, FmtInt(ws.LuongSPQL), tenQuy, FmtInt(ws.KyQuy.LuongSPQL), tenLK, FmtInt(ws.KyLuyKe.LuongSPQL)));
-                sb.AppendLine(string.Format("    + Lương chế độ QL: Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng.", ws.Thang, FmtInt(ws.LuongCheDoQL), tenQuy, FmtInt(ws.KyQuy.LuongCheDoQL), tenLK, FmtInt(ws.KyLuyKe.LuongCheDoQL)));
+                    sb.AppendLine(string.Format("    + Trừ lương trong kỳ: {0} triệu đồng ({1}).", FmtMoney(ws.TruLuong), ws.LyDoTruLuong));
+                sb.AppendLine(string.Format("    + Lương chế độ (lễ, phép, học): Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.LuongCheDoTT), tenQuy, FmtMoney(ws.KyQuy.LuongCheDoTT), tenLK, FmtMoney(ws.KyLuyKe.LuongCheDoTT)));
+                sb.AppendLine(string.Format("  * Tiền lương lao động quản lý: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.TongLuongQL), tenQuy, FmtMoney(ws.KyQuy.TongLuongQL), tenLK, FmtMoney(ws.KyLuyKe.TongLuongQL)));
+                sb.AppendLine(string.Format("    + Lương sản phẩm QL: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.LuongSPQL), tenQuy, FmtMoney(ws.KyQuy.LuongSPQL), tenLK, FmtMoney(ws.KyLuyKe.LuongSPQL)));
+                sb.AppendLine(string.Format("    + Lương chế độ QL: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.LuongCheDoQL), tenQuy, FmtMoney(ws.KyQuy.LuongCheDoQL), tenLK, FmtMoney(ws.KyLuyKe.LuongCheDoQL)));
             }
 
             if (ws.ListGNV != null && ws.ListGNV.Count > 0)
@@ -161,50 +171,50 @@ namespace CiscoLDTLApp
                 sb.AppendLine(string.Format("  * Chi tiết công việc phát sinh / Giấy giao nhiệm vụ (GNV) trong tháng {0}:", ws.Thang));
                 foreach (var gnv in ws.ListGNV)
                 {
-                    sb.AppendLine(string.Format("    [{0}] {1} | ĐVT: {2} | KL: {3} | Đơn giá: {4} đ | Thành tiền: {5} đ", gnv.STT, gnv.NoiDung, gnv.DVT, FmtDec(gnv.KhoiLuong, 2), FmtInt(gnv.DonGia), FmtInt(gnv.ThanhTien)));
+                    sb.AppendLine(string.Format("    [{0}] {1} | ĐVT: {2} | KL: {3} | Đơn giá: {4} đ/ĐVT | Thành tiền: {5} triệu đồng", gnv.STT, gnv.NoiDung, gnv.DVT, FmtDec(gnv.KhoiLuong, 2), FmtInt(gnv.DonGia), FmtMoney(gnv.ThanhTien)));
                 }
             }
 
             if (!isMultiPeriod)
             {
-                sb.AppendLine(string.Format("- Tiền lương bình quân toàn PX: {0} nghìn đồng/người/tháng (LĐTT: {1} nghìn đồng/người/tháng).", FmtDec(ws.TLBinhQuanToanPX, 2), FmtDec(ws.TLSPBinhQuanLDTT, 2)));
-                sb.AppendLine(string.Format("- Thu nhập bình quân toàn PX: {0} nghìn đồng/người/tháng (LĐTT: {1} nghìn đồng/người/tháng).", FmtDec(ws.ThuNhapBQToanPX, 2), FmtDec(ws.ThuNhapBQLDTT, 2)));
+                sb.AppendLine(string.Format("- Tiền lương bình quân toàn PX: {0} triệu đồng/người/tháng (LĐTT: {1} triệu đồng/người/tháng).", FmtMoneyFromThousands(ws.TLBinhQuanToanPX), FmtMoneyFromThousands(ws.TLSPBinhQuanLDTT)));
+                sb.AppendLine(string.Format("- Thu nhập bình quân toàn PX: {0} triệu đồng/người/tháng (LĐTT: {1} triệu đồng/người/tháng).", FmtMoneyFromThousands(ws.ThuNhapBQToanPX), FmtMoneyFromThousands(ws.ThuNhapBQLDTT)));
             }
             else
             {
-                sb.AppendLine(string.Format("- Tiền lương bình quân toàn PX (1.000đ/người/tháng): Tháng {0}: {1}; {2}: {3}; {4}: {5}.", ws.Thang, FmtDec(ws.TLBinhQuanToanPX, 2), tenQuy, FmtDec(ws.KyQuy.TLBinhQuanToanPX, 2), tenLK, FmtDec(ws.KyLuyKe.TLBinhQuanToanPX, 2)));
-                sb.AppendLine(string.Format("- Thu nhập bình quân toàn PX (1.000đ/người/tháng): Tháng {0}: {1}; {2}: {3}; {4}: {5}.", ws.Thang, FmtDec(ws.ThuNhapBQToanPX, 2), tenQuy, FmtDec(ws.KyQuy.ThuNhapBQToanPX, 2), tenLK, FmtDec(ws.KyLuyKe.ThuNhapBQToanPX, 2)));
-                sb.AppendLine(string.Format("- Thu nhập bình quân LĐTT (1.000đ/người/tháng): Tháng {0}: {1}; {2}: {3}; {4}: {5}.", ws.Thang, FmtDec(ws.ThuNhapBQLDTT, 2), tenQuy, FmtDec(ws.KyQuy.ThuNhapBQLDTT, 2), tenLK, FmtDec(ws.KyLuyKe.ThuNhapBQLDTT, 2)));
+                sb.AppendLine(string.Format("- Tiền lương bình quân toàn PX (triệu đồng/người/tháng): Tháng {0}: {1}; {2}: {3}; {4}: {5}.", ws.Thang, FmtMoneyFromThousands(ws.TLBinhQuanToanPX), tenQuy, FmtMoneyFromThousands(ws.KyQuy.TLBinhQuanToanPX), tenLK, FmtMoneyFromThousands(ws.KyLuyKe.TLBinhQuanToanPX)));
+                sb.AppendLine(string.Format("- Thu nhập bình quân toàn PX (triệu đồng/người/tháng): Tháng {0}: {1}; {2}: {3}; {4}: {5}.", ws.Thang, FmtMoneyFromThousands(ws.ThuNhapBQToanPX), tenQuy, FmtMoneyFromThousands(ws.KyQuy.ThuNhapBQToanPX), tenLK, FmtMoneyFromThousands(ws.KyLuyKe.ThuNhapBQToanPX)));
+                sb.AppendLine(string.Format("- Thu nhập bình quân LĐTT (triệu đồng/người/tháng): Tháng {0}: {1}; {2}: {3}; {4}: {5}.", ws.Thang, FmtMoneyFromThousands(ws.ThuNhapBQLDTT), tenQuy, FmtMoneyFromThousands(ws.KyQuy.ThuNhapBQLDTT), tenLK, FmtMoneyFromThousands(ws.KyLuyKe.ThuNhapBQLDTT)));
             }
 
             sb.AppendLine();
             sb.AppendLine("2.2. Ăn ca (Đơn giá 30.000 đồng/công):");
             if (!isMultiPeriod)
             {
-                sb.AppendLine(string.Format("- Tổng số công ăn ca tháng {0}/{1}: {2} công; Thành tiền: {3} đồng.", ws.Thang, ws.Nam, FmtDec(ws.CongAnCa, 1), FmtInt(ws.TienAnCa)));
+                sb.AppendLine(string.Format("- Tổng số công ăn ca tháng {0}/{1}: {2} công; Thành tiền: {3} triệu đồng.", ws.Thang, ws.Nam, FmtDec(ws.CongAnCa, 1), FmtMoney(ws.TienAnCa)));
             }
             else
             {
                 sb.AppendLine(string.Format("- Tổng số công ăn ca: Tháng {0}: {1} công; {2}: {3} công; {4}: {5} công.", ws.Thang, FmtDec(ws.CongAnCa, 1), tenQuy, FmtDec(ws.KyQuy.CongAnCa, 1), tenLK, FmtDec(ws.KyLuyKe.CongAnCa, 1)));
-                sb.AppendLine(string.Format("- Tổng số tiền ăn ca: Tháng {0}: {1} đồng; {2}: {3} đồng; {4}: {5} đồng.", ws.Thang, FmtInt(ws.TienAnCa), tenQuy, FmtInt(ws.KyQuy.TienAnCa), tenLK, FmtInt(ws.KyLuyKe.TienAnCa)));
+                sb.AppendLine(string.Format("- Tổng số tiền ăn ca: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.TienAnCa), tenQuy, FmtMoney(ws.KyQuy.TienAnCa), tenLK, FmtMoney(ws.KyLuyKe.TienAnCa)));
             }
 
             sb.AppendLine();
             sb.AppendLine("2.3. Bồi dưỡng độc hại bằng hiện vật:");
-            sb.AppendLine(string.Format("- Mức 1 (13.000đ/công): Tháng {0}: {1} công ({2} đ)", ws.Thang, FmtDec(ws.BDDH_Muc1_Cong, 1), FmtInt(ws.BDDH_Muc1_Tien)) +
-                (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} đ) | {3}: {4} công ({5} đ)", tenQuy, FmtDec(ws.KyQuy.BDDH_Muc1_Cong, 1), FmtInt(ws.KyQuy.BDDH_Muc1_Tien), tenLK, FmtDec(ws.KyLuyKe.BDDH_Muc1_Cong, 1), FmtInt(ws.KyLuyKe.BDDH_Muc1_Tien)) : ""));
-            sb.AppendLine(string.Format("- Mức 2 (20.000đ/công): Tháng {0}: {1} công ({2} đ)", ws.Thang, FmtDec(ws.BDDH_Muc2_Cong, 1), FmtInt(ws.BDDH_Muc2_Tien)) +
-                (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} đ) | {3}: {4} công ({5} đ)", tenQuy, FmtDec(ws.KyQuy.BDDH_Muc2_Cong, 1), FmtInt(ws.KyQuy.BDDH_Muc2_Tien), tenLK, FmtDec(ws.KyLuyKe.BDDH_Muc2_Cong, 1), FmtInt(ws.KyLuyKe.BDDH_Muc2_Tien)) : ""));
+            sb.AppendLine(string.Format("- Mức 1 (13.000đ/công): Tháng {0}: {1} công ({2} triệu đồng)", ws.Thang, FmtDec(ws.BDDH_Muc1_Cong, 1), FmtMoney(ws.BDDH_Muc1_Tien)) +
+                (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} triệu đồng) | {3}: {4} công ({5} triệu đồng)", tenQuy, FmtDec(ws.KyQuy.BDDH_Muc1_Cong, 1), FmtMoney(ws.KyQuy.BDDH_Muc1_Tien), tenLK, FmtDec(ws.KyLuyKe.BDDH_Muc1_Cong, 1), FmtMoney(ws.KyLuyKe.BDDH_Muc1_Tien)) : ""));
+            sb.AppendLine(string.Format("- Mức 2 (20.000đ/công): Tháng {0}: {1} công ({2} triệu đồng)", ws.Thang, FmtDec(ws.BDDH_Muc2_Cong, 1), FmtMoney(ws.BDDH_Muc2_Tien)) +
+                (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} triệu đồng) | {3}: {4} công ({5} triệu đồng)", tenQuy, FmtDec(ws.KyQuy.BDDH_Muc2_Cong, 1), FmtMoney(ws.KyQuy.BDDH_Muc2_Tien), tenLK, FmtDec(ws.KyLuyKe.BDDH_Muc2_Cong, 1), FmtMoney(ws.KyLuyKe.BDDH_Muc2_Tien)) : ""));
             if (ws.CoMuc3BDDH || ws.BDDH_Muc3_Cong > 0)
             {
-                sb.AppendLine(string.Format("- Mức 3 (26.000đ/công): Tháng {0}: {1} công ({2} đ)", ws.Thang, FmtDec(ws.BDDH_Muc3_Cong, 1), FmtInt(ws.BDDH_Muc3_Tien)) +
-                    (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} đ) | {3}: {4} công ({5} đ)", tenQuy, FmtDec(ws.KyQuy.BDDH_Muc3_Cong, 1), FmtInt(ws.KyQuy.BDDH_Muc3_Tien), tenLK, FmtDec(ws.KyLuyKe.BDDH_Muc3_Cong, 1), FmtInt(ws.KyLuyKe.BDDH_Muc3_Tien)) : ""));
+                sb.AppendLine(string.Format("- Mức 3 (26.000đ/công): Tháng {0}: {1} công ({2} triệu đồng)", ws.Thang, FmtDec(ws.BDDH_Muc3_Cong, 1), FmtMoney(ws.BDDH_Muc3_Tien)) +
+                    (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} triệu đồng) | {3}: {4} công ({5} triệu đồng)", tenQuy, FmtDec(ws.KyQuy.BDDH_Muc3_Cong, 1), FmtMoney(ws.KyQuy.BDDH_Muc3_Tien), tenLK, FmtDec(ws.KyLuyKe.BDDH_Muc3_Cong, 1), FmtMoney(ws.KyLuyKe.BDDH_Muc3_Tien)) : ""));
             }
             double tongCongBDDH_T = ws.BDDH_Muc1_Cong + ws.BDDH_Muc2_Cong + ws.BDDH_Muc3_Cong;
             double tongCongBDDH_Q = ws.KyQuy.BDDH_Muc1_Cong + ws.KyQuy.BDDH_Muc2_Cong + ws.KyQuy.BDDH_Muc3_Cong;
             double tongCongBDDH_LK = ws.KyLuyKe.BDDH_Muc1_Cong + ws.KyLuyKe.BDDH_Muc2_Cong + ws.KyLuyKe.BDDH_Muc3_Cong;
-            sb.AppendLine(string.Format("- TỔNG CỘNG BDĐH: Tháng {0}: {1} công ({2} đ)", ws.Thang, FmtDec(tongCongBDDH_T, 1), FmtInt(ws.TongTienBDDH)) +
-                (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} đ) | {3}: {4} công ({5} đ)", tenQuy, FmtDec(tongCongBDDH_Q, 1), FmtInt(ws.KyQuy.TongTienBDDH), tenLK, FmtDec(tongCongBDDH_LK, 1), FmtInt(ws.KyLuyKe.TongTienBDDH)) : ""));
+            sb.AppendLine(string.Format("- TỔNG CỘNG BDĐH: Tháng {0}: {1} công ({2} triệu đồng)", ws.Thang, FmtDec(tongCongBDDH_T, 1), FmtMoney(ws.TongTienBDDH)) +
+                (isMultiPeriod ? string.Format(" | {0}: {1} công ({2} triệu đồng) | {3}: {4} công ({5} triệu đồng)", tenQuy, FmtDec(tongCongBDDH_Q, 1), FmtMoney(ws.KyQuy.TongTienBDDH), tenLK, FmtDec(tongCongBDDH_LK, 1), FmtMoney(ws.KyLuyKe.TongTienBDDH)) : ""));
 
             sb.AppendLine();
             sb.AppendLine("3. Công tác bình công chấm điểm, ghi chép sổ sách:");
@@ -237,7 +247,7 @@ namespace CiscoLDTLApp
                     sb.AppendLine(string.Format("{0,-4} | {1,-5} | {2,-24} | {3,-6} | {4,7} | {5,7} | {6,8} | {7,12} | {8,12}",
                         e.STT, e.SDB, TruncateStr(e.HoTen, 24), TruncateStr(e.ChucDanh, 6),
                         FmtDec(e.CongSP, 1), FmtDec(e.CongLePhep, 1), FmtDec(e.HeSoHuong, 2),
-                        FmtInt(e.LuongSanPham), FmtInt(e.TongTienLuong)));
+                        FmtMoney(e.LuongSanPham), FmtMoney(e.TongTienLuong)));
                 }
                 if (ws.ListNhanVien.Count > previewMax)
                 {
@@ -448,6 +458,7 @@ namespace CiscoLDTLApp
             }
 
             // Mục 2. Tiền lương, ăn ca thực hiện
+            body.Append(P("Đơn vị các khoản tiền: triệu đồng (1 chữ số thập phân); đơn giá ghi riêng bằng đồng/đơn vị.", false, true, "both", 20, 20, 24, 420));
             body.Append(P("2. Tiền lương, ăn ca thực hiện:", true, false, "both", 60, 40, 26, 420));
             body.Append(P("2.1. Tiền lương", true, true, "both", 20, 20, 26, 420));
 
@@ -464,47 +475,47 @@ namespace CiscoLDTLApp
                 }
                 if (!string.IsNullOrEmpty(ws.SanLuongPhuName) && ws.SanLuongPhuKL > 0)
                 {
-                    body.Append(P(string.Format("+ Khối lượng {0}: {1} {2}, thành tiền: {3} đồng.", ws.SanLuongPhuName, FmtDec(ws.SanLuongPhuKL, 2), ws.DvtSanPham, FmtInt(ws.SanLuongPhuTT)), false, false, "both", 20, 20, 26, 560));
+                    body.Append(P(string.Format("+ Khối lượng {0}: {1} {2}, thành tiền: {3} triệu đồng.", ws.SanLuongPhuName, FmtDec(ws.SanLuongPhuKL, 2), ws.DvtSanPham, FmtMoney(ws.SanLuongPhuTT)), false, false, "both", 20, 20, 26, 560));
                 }
             }
             else if (ws.MaPX == "CDNL")
             {
-                body.Append(P(string.Format("- Quỹ lương sản phẩm các phân xưởng chính làm cơ sở tính lương tháng {0}: {1} đồng.", ws.Thang, FmtInt(ws.SanLuongTH)), false, false, "both", 20, 20, 26, 420));
+                body.Append(P(string.Format("- Quỹ lương sản phẩm các phân xưởng chính làm cơ sở tính lương tháng {0}: {1} triệu đồng.", ws.Thang, FmtMoney(ws.SanLuongTH)), false, false, "both", 20, 20, 26, 420));
             }
 
             if (!isMultiPeriod)
             {
-                body.Append(PLabelValue(string.Format("- Tổng tiền lương toàn Phân xưởng tháng {0}/{1}: ", ws.Thang, ws.Nam), string.Format("{0} đồng. Trong đó:", FmtInt(ws.TongLuongToanPX)), "both", 20, 20, 420));
-                body.Append(PLabelValue("+ Tiền lương lao động trực tiếp: ", string.Format("{0} đồng, gồm:", FmtInt(ws.TongLuongTT)), "both", 20, 20, 560));
-                body.Append(P(string.Format("• Tiền lương sản phẩm trực tiếp: {0} đồng.", FmtInt(ws.LuongSPTT)), false, false, "both", 20, 20, 26, 720));
+                body.Append(PLabelValue(string.Format("- Tổng tiền lương toàn Phân xưởng tháng {0}/{1}: ", ws.Thang, ws.Nam), string.Format("{0} triệu đồng. Trong đó:", FmtMoney(ws.TongLuongToanPX)), "both", 20, 20, 420));
+                body.Append(PLabelValue("+ Tiền lương lao động trực tiếp: ", string.Format("{0} triệu đồng, gồm:", FmtMoney(ws.TongLuongTT)), "both", 20, 20, 560));
+                body.Append(P(string.Format("• Tiền lương sản phẩm trực tiếp: {0} triệu đồng.", FmtMoney(ws.LuongSPTT)), false, false, "both", 20, 20, 26, 720));
                 if (ws.LuongCVKhac > 0)
-                    body.Append(P(string.Format("• Tiền lương công việc khác (GNV): {0} đồng ({1} công).", FmtInt(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1)), false, false, "both", 20, 20, 26, 720));
+                    body.Append(P(string.Format("• Tiền lương công việc khác (GNV): {0} triệu đồng ({1} công).", FmtMoney(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1)), false, false, "both", 20, 20, 26, 720));
                 if (ws.TruLuong < 0)
-                    body.Append(P(string.Format("• Giảm trừ tiền lương: {0} đồng ({1}).", FmtInt(ws.TruLuong), ws.LyDoTruLuong), false, false, "both", 20, 20, 26, 720));
-                body.Append(P(string.Format("• Tiền lương chế độ (lễ, phép, học): {0} đồng.", FmtInt(ws.LuongCheDoTT)), false, false, "both", 20, 20, 26, 720));
-                body.Append(PLabelValue("+ Tiền lương lao động quản lý: ", string.Format("{0} đồng (Lương sản phẩm: {1} đồng; Lương chế độ: {2} đồng).", FmtInt(ws.TongLuongQL), FmtInt(ws.LuongSPQL), FmtInt(ws.LuongCheDoQL)), "both", 20, 20, 560));
+                    body.Append(P(string.Format("• Giảm trừ tiền lương: {0} triệu đồng ({1}).", FmtMoney(ws.TruLuong), ws.LyDoTruLuong), false, false, "both", 20, 20, 26, 720));
+                body.Append(P(string.Format("• Tiền lương chế độ (lễ, phép, học): {0} triệu đồng.", FmtMoney(ws.LuongCheDoTT)), false, false, "both", 20, 20, 26, 720));
+                body.Append(PLabelValue("+ Tiền lương lao động quản lý: ", string.Format("{0} triệu đồng (Lương sản phẩm: {1} triệu đồng; Lương chế độ: {2} triệu đồng).", FmtMoney(ws.TongLuongQL), FmtMoney(ws.LuongSPQL), FmtMoney(ws.LuongCheDoQL)), "both", 20, 20, 560));
             }
             else
             {
-                body.Append(PLabelValue("- Tổng tiền lương của toàn Phân xưởng: ", string.Format("Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng. Trong đó:", ws.Thang, FmtInt(ws.TongLuongToanPX), tenQuy, FmtInt(ws.KyQuy.TongLuongToanPX), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.TongLuongToanPX)), "both", 20, 20, 420));
-                body.Append(PLabelValue("+ Tiền lương lao động trực tiếp: ", string.Format("Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng:", ws.Thang, FmtInt(ws.TongLuongTT), tenQuy, FmtInt(ws.KyQuy.TongLuongTT), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.TongLuongTT)), "both", 20, 20, 560));
-                body.Append(P(string.Format("• Tiền lương theo sản phẩm: Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng.", ws.Thang, FmtInt(ws.LuongSPTT), tenQuy, FmtInt(ws.KyQuy.LuongSPTT), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.LuongSPTT)), false, false, "both", 20, 20, 26, 720));
+                body.Append(PLabelValue("- Tổng tiền lương của toàn Phân xưởng: ", string.Format("Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng. Trong đó:", ws.Thang, FmtMoney(ws.TongLuongToanPX), tenQuy, FmtMoney(ws.KyQuy.TongLuongToanPX), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.TongLuongToanPX)), "both", 20, 20, 420));
+                body.Append(PLabelValue("+ Tiền lương lao động trực tiếp: ", string.Format("Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng:", ws.Thang, FmtMoney(ws.TongLuongTT), tenQuy, FmtMoney(ws.KyQuy.TongLuongTT), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.TongLuongTT)), "both", 20, 20, 560));
+                body.Append(P(string.Format("• Tiền lương theo sản phẩm: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng.", ws.Thang, FmtMoney(ws.LuongSPTT), tenQuy, FmtMoney(ws.KyQuy.LuongSPTT), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongSPTT)), false, false, "both", 20, 20, 26, 720));
                 if (ws.LuongCVKhac > 0 || ws.KyQuy.LuongCVKhac > 0 || ws.KyLuyKe.LuongCVKhac > 0)
                 {
-                    body.Append(P(string.Format("• Tiền lương công việc khác (GNV): Tháng {0}: {1} đồng ({2} công); {3}: {4} đồng ({5} công); {6} năm {7}: {8} đồng ({9} công).", ws.Thang, FmtInt(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1), tenQuy, FmtInt(ws.KyQuy.LuongCVKhac), FmtDec(ws.KyQuy.CongCVKhac, 1), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.LuongCVKhac), FmtDec(ws.KyLuyKe.CongCVKhac, 1)), false, false, "both", 20, 20, 26, 720));
+                    body.Append(P(string.Format("• Tiền lương công việc khác (GNV): Tháng {0}: {1} triệu đồng ({2} công); {3}: {4} triệu đồng ({5} công); {6} năm {7}: {8} triệu đồng ({9} công).", ws.Thang, FmtMoney(ws.LuongCVKhac), FmtDec(ws.CongCVKhac, 1), tenQuy, FmtMoney(ws.KyQuy.LuongCVKhac), FmtDec(ws.KyQuy.CongCVKhac, 1), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongCVKhac), FmtDec(ws.KyLuyKe.CongCVKhac, 1)), false, false, "both", 20, 20, 26, 720));
                 }
                 if (ws.KyLuyKe.LuongTDT > 0)
                 {
-                    body.Append(P(string.Format("• Tiền lương nhân công Trung đại tu (TĐT): {0} năm {1}: {2} đồng ({3} công).", tenLK, ws.Nam, FmtInt(ws.KyLuyKe.LuongTDT), FmtDec(ws.KyLuyKe.CongTDT, 1)), false, false, "both", 20, 20, 26, 720));
+                    body.Append(P(string.Format("• Tiền lương nhân công Trung đại tu (TĐT): {0} năm {1}: {2} triệu đồng ({3} công).", tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongTDT), FmtDec(ws.KyLuyKe.CongTDT, 1)), false, false, "both", 20, 20, 26, 720));
                 }
                 if (ws.TruLuong < 0)
                 {
-                    body.Append(P(string.Format("• Trừ tiền lương công tác VSMT, ATBHLĐ trong kỳ: {0} đồng ({1}).", FmtInt(ws.TruLuong), ws.LyDoTruLuong), false, false, "both", 20, 20, 26, 720));
+                    body.Append(P(string.Format("• Trừ tiền lương công tác VSMT, ATBHLĐ trong kỳ: {0} triệu đồng ({1}).", FmtMoney(ws.TruLuong), ws.LyDoTruLuong), false, false, "both", 20, 20, 26, 720));
                 }
-                body.Append(P(string.Format("• Tiền lương chế độ (lễ, phép, học): Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng.", ws.Thang, FmtInt(ws.LuongCheDoTT), tenQuy, FmtInt(ws.KyQuy.LuongCheDoTT), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.LuongCheDoTT)), false, false, "both", 20, 20, 26, 720));
-                body.Append(PLabelValue("+ Tiền lương lao động quản lý: ", string.Format("Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng:", ws.Thang, FmtInt(ws.TongLuongQL), tenQuy, FmtInt(ws.KyQuy.TongLuongQL), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.TongLuongQL)), "both", 20, 20, 560));
-                body.Append(P(string.Format("• Tiền lương theo sản phẩm QL: Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng;", ws.Thang, FmtInt(ws.LuongSPQL), tenQuy, FmtInt(ws.KyQuy.LuongSPQL), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.LuongSPQL)), false, false, "both", 20, 20, 26, 720));
-                body.Append(P(string.Format("• Tiền lương chế độ QL (phép, học, lễ): Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng.", ws.Thang, FmtInt(ws.LuongCheDoQL), tenQuy, FmtInt(ws.KyQuy.LuongCheDoQL), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.LuongCheDoQL)), false, false, "both", 20, 20, 26, 720));
+                body.Append(P(string.Format("• Tiền lương chế độ (lễ, phép, học): Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng.", ws.Thang, FmtMoney(ws.LuongCheDoTT), tenQuy, FmtMoney(ws.KyQuy.LuongCheDoTT), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongCheDoTT)), false, false, "both", 20, 20, 26, 720));
+                body.Append(PLabelValue("+ Tiền lương lao động quản lý: ", string.Format("Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng:", ws.Thang, FmtMoney(ws.TongLuongQL), tenQuy, FmtMoney(ws.KyQuy.TongLuongQL), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.TongLuongQL)), "both", 20, 20, 560));
+                body.Append(P(string.Format("• Tiền lương theo sản phẩm QL: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng;", ws.Thang, FmtMoney(ws.LuongSPQL), tenQuy, FmtMoney(ws.KyQuy.LuongSPQL), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongSPQL)), false, false, "both", 20, 20, 26, 720));
+                body.Append(P(string.Format("• Tiền lương chế độ QL (phép, học, lễ): Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng.", ws.Thang, FmtMoney(ws.LuongCheDoQL), tenQuy, FmtMoney(ws.KyQuy.LuongCheDoQL), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongCheDoQL)), false, false, "both", 20, 20, 26, 720));
             }
 
             // Bảng chi tiết GNV nếu có
@@ -517,27 +528,27 @@ namespace CiscoLDTLApp
             // Chỉ tiêu bình quân
             if (!isMultiPeriod)
             {
-                body.Append(P(string.Format("- Tiền lương bình quân toàn Phân xưởng: {0} nghìn đồng/người/tháng (LĐ trực tiếp: {1} nghìn đồng/người/tháng).", FmtDec(ws.TLBinhQuanToanPX, 2), FmtDec(ws.TLSPBinhQuanLDTT, 2)), false, false, "both", 40, 20, 26, 420));
-                body.Append(P(string.Format("- Thu nhập bình quân toàn Phân xưởng: {0} nghìn đồng/người/tháng (LĐ trực tiếp: {1} nghìn đồng/người/tháng).", FmtDec(ws.ThuNhapBQToanPX, 2), FmtDec(ws.ThuNhapBQLDTT, 2)), false, false, "both", 20, 40, 26, 420));
+                body.Append(P(string.Format("- Tiền lương bình quân toàn Phân xưởng: {0} triệu đồng/người/tháng (LĐ trực tiếp: {1} triệu đồng/người/tháng).", FmtMoneyFromThousands(ws.TLBinhQuanToanPX), FmtMoneyFromThousands(ws.TLSPBinhQuanLDTT)), false, false, "both", 40, 20, 26, 420));
+                body.Append(P(string.Format("- Thu nhập bình quân toàn Phân xưởng: {0} triệu đồng/người/tháng (LĐ trực tiếp: {1} triệu đồng/người/tháng).", FmtMoneyFromThousands(ws.ThuNhapBQToanPX), FmtMoneyFromThousands(ws.ThuNhapBQLDTT)), false, false, "both", 20, 40, 26, 420));
             }
             else
             {
-                body.Append(P(string.Format("- Tiền lương bình quân của toàn Phân xưởng: Tháng {0}: {1} nghìn đồng/người/tháng; {2}: {3} nghìn đồng/người/tháng; {4} năm {5}: {6} nghìn đồng/người/tháng.", ws.Thang, FmtDec(ws.TLBinhQuanToanPX, 2), tenQuy, FmtDec(ws.KyQuy.TLBinhQuanToanPX, 2), tenLK, ws.Nam, FmtDec(ws.KyLuyKe.TLBinhQuanToanPX, 2)), false, false, "both", 40, 20, 26, 420));
-                body.Append(P(string.Format("- Thu nhập bình quân của toàn Phân xưởng: Tháng {0}: {1} nghìn đồng/người/tháng; {2}: {3} nghìn đồng/người/tháng; {4} năm {5}: {6} nghìn đồng/người/tháng.", ws.Thang, FmtDec(ws.ThuNhapBQToanPX, 2), tenQuy, FmtDec(ws.KyQuy.ThuNhapBQToanPX, 2), tenLK, ws.Nam, FmtDec(ws.KyLuyKe.ThuNhapBQToanPX, 2)), false, false, "both", 20, 20, 26, 420));
-                body.Append(P(string.Format("- Tiền lương sản phẩm bình quân LĐTT: Tháng {0}: {1} nghìn đồng/người/tháng; {2}: {3} nghìn đồng/người/tháng; {4} năm {5}: {6} nghìn đồng/người/tháng.", ws.Thang, FmtDec(ws.TLSPBinhQuanLDTT, 2), tenQuy, FmtDec(ws.KyQuy.TLSPBinhQuanLDTT, 2), tenLK, ws.Nam, FmtDec(ws.KyLuyKe.TLSPBinhQuanLDTT, 2)), false, false, "both", 20, 20, 26, 420));
-                body.Append(P(string.Format("- Thu nhập bình quân của LĐTT: Tháng {0}: {1} nghìn đồng/người/tháng; {2}: {3} nghìn đồng/người/tháng; {4} năm {5}: {6} nghìn đồng/người/tháng.", ws.Thang, FmtDec(ws.ThuNhapBQLDTT, 2), tenQuy, FmtDec(ws.KyQuy.ThuNhapBQLDTT, 2), tenLK, ws.Nam, FmtDec(ws.KyLuyKe.ThuNhapBQLDTT, 2)), false, false, "both", 20, 40, 26, 420));
+                body.Append(P(string.Format("- Tiền lương bình quân của toàn Phân xưởng: Tháng {0}: {1} triệu đồng/người/tháng; {2}: {3} triệu đồng/người/tháng; {4} năm {5}: {6} triệu đồng/người/tháng.", ws.Thang, FmtMoneyFromThousands(ws.TLBinhQuanToanPX), tenQuy, FmtMoneyFromThousands(ws.KyQuy.TLBinhQuanToanPX), tenLK, ws.Nam, FmtMoneyFromThousands(ws.KyLuyKe.TLBinhQuanToanPX)), false, false, "both", 40, 20, 26, 420));
+                body.Append(P(string.Format("- Thu nhập bình quân của toàn Phân xưởng: Tháng {0}: {1} triệu đồng/người/tháng; {2}: {3} triệu đồng/người/tháng; {4} năm {5}: {6} triệu đồng/người/tháng.", ws.Thang, FmtMoneyFromThousands(ws.ThuNhapBQToanPX), tenQuy, FmtMoneyFromThousands(ws.KyQuy.ThuNhapBQToanPX), tenLK, ws.Nam, FmtMoneyFromThousands(ws.KyLuyKe.ThuNhapBQToanPX)), false, false, "both", 20, 20, 26, 420));
+                body.Append(P(string.Format("- Tiền lương sản phẩm bình quân LĐTT: Tháng {0}: {1} triệu đồng/người/tháng; {2}: {3} triệu đồng/người/tháng; {4} năm {5}: {6} triệu đồng/người/tháng.", ws.Thang, FmtMoneyFromThousands(ws.TLSPBinhQuanLDTT), tenQuy, FmtMoneyFromThousands(ws.KyQuy.TLSPBinhQuanLDTT), tenLK, ws.Nam, FmtMoneyFromThousands(ws.KyLuyKe.TLSPBinhQuanLDTT)), false, false, "both", 20, 20, 26, 420));
+                body.Append(P(string.Format("- Thu nhập bình quân của LĐTT: Tháng {0}: {1} triệu đồng/người/tháng; {2}: {3} triệu đồng/người/tháng; {4} năm {5}: {6} triệu đồng/người/tháng.", ws.Thang, FmtMoneyFromThousands(ws.ThuNhapBQLDTT), tenQuy, FmtMoneyFromThousands(ws.KyQuy.ThuNhapBQLDTT), tenLK, ws.Nam, FmtMoneyFromThousands(ws.KyLuyKe.ThuNhapBQLDTT)), false, false, "both", 20, 40, 26, 420));
             }
 
             // Mục 2.2. Ăn ca
             body.Append(P("2.2. Ăn ca", true, true, "both", 40, 20, 26, 420));
             if (!isMultiPeriod)
             {
-                body.Append(P(string.Format("- Tổng số công ăn ca tháng {0}/{1}: {2} công; Tổng số tiền ăn ca (mức 30.000đ/công): {3} đồng.", ws.Thang, ws.Nam, FmtDec(ws.CongAnCa, 1), FmtInt(ws.TienAnCa)), false, false, "both", 20, 40, 26, 420));
+                body.Append(P(string.Format("- Tổng số công ăn ca tháng {0}/{1}: {2} công; Tổng số tiền ăn ca (mức 30.000đ/công): {3} triệu đồng.", ws.Thang, ws.Nam, FmtDec(ws.CongAnCa, 1), FmtMoney(ws.TienAnCa)), false, false, "both", 20, 40, 26, 420));
             }
             else
             {
                 body.Append(P(string.Format("- Tổng số công ăn ca: Tháng {0}: {1} công; {2}: {3} công; {4} năm {5}: {6} công.", ws.Thang, FmtDec(ws.CongAnCa, 1), tenQuy, FmtDec(ws.KyQuy.CongAnCa, 1), tenLK, ws.Nam, FmtDec(ws.KyLuyKe.CongAnCa, 1)), false, false, "both", 20, 20, 26, 420));
-                body.Append(P(string.Format("- Tổng số tiền ăn ca: Tháng {0}: {1} đồng; {2}: {3} đồng; {4} năm {5}: {6} đồng.", ws.Thang, FmtInt(ws.TienAnCa), tenQuy, FmtInt(ws.KyQuy.TienAnCa), tenLK, ws.Nam, FmtInt(ws.KyLuyKe.TienAnCa)), false, false, "both", 20, 40, 26, 420));
+                body.Append(P(string.Format("- Tổng số tiền ăn ca: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng.", ws.Thang, FmtMoney(ws.TienAnCa), tenQuy, FmtMoney(ws.KyQuy.TienAnCa), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.TienAnCa)), false, false, "both", 20, 40, 26, 420));
             }
 
             // Mục 2.3. Bồi dưỡng độc hại bằng hiện vật
@@ -622,8 +633,8 @@ namespace CiscoLDTLApp
             sb.Append(TcSmall("Ăn ca", 300, true, "center"));
             sb.Append(TcSmall("Điểm / HS", 420, true, "center"));
             sb.Append(TcSmall("XL", 220, true, "center"));
-            sb.Append(TcSmall("Lương SP (đ)", 620, true, "center"));
-            sb.Append(TcSmall("Tổng lương (đ)", 630, true, "center"));
+            sb.Append(TcSmall("Lương SP (triệu đồng)", 620, true, "center"));
+            sb.Append(TcSmall("Tổng lương (triệu đồng)", 630, true, "center"));
             sb.Append("</w:tr>");
 
             string lastBoPhan = "";
@@ -658,8 +669,8 @@ namespace CiscoLDTLApp
                 sb.Append(TcSmall(FmtDec(e.CongAnCa, 1), 300, false, "right"));
                 sb.Append(TcSmall(FmtDec(e.HeSoHuong, 2), 420, false, "right"));
                 sb.Append(TcSmall(e.XepLoai, 220, false, "center"));
-                sb.Append(TcSmall(FmtInt(e.LuongSanPham), 620, false, "right"));
-                sb.Append(TcSmall(FmtInt(e.TongTienLuong), 630, true, "right"));
+                sb.Append(TcSmall(FmtMoney(e.LuongSanPham), 620, false, "right"));
+                sb.Append(TcSmall(FmtMoney(e.TongTienLuong), 630, true, "right"));
                 sb.Append("</w:tr>");
             }
 
@@ -674,8 +685,8 @@ namespace CiscoLDTLApp
             sb.Append(TcSmall(FmtDec(sAnCa, 1), 300, true, "right"));
             sb.Append(TcSmall("", 420, true, "right"));
             sb.Append(TcSmall("", 220, true, "center"));
-            sb.Append(TcSmall(FmtInt(sLuongSP), 620, true, "right"));
-            sb.Append(TcSmall(FmtInt(sTongLuong), 630, true, "right"));
+            sb.Append(TcSmall(FmtMoney(sLuongSP), 620, true, "right"));
+            sb.Append(TcSmall(FmtMoney(sTongLuong), 630, true, "right"));
             sb.Append("</w:tr>");
 
             sb.Append("</w:tbl>");
@@ -781,7 +792,7 @@ namespace CiscoLDTLApp
             sb.Append(Tc("Đơn vị tính", 500, true, "center"));
             sb.Append(Tc("KL thực hiện", 600, true, "center"));
             sb.Append(Tc("Đơn giá (đ)", 650, true, "center"));
-            sb.Append(Tc("Thành tiền (đ)", 750, true, "center"));
+            sb.Append(Tc("Thành tiền (triệu đồng)", 750, true, "center"));
             sb.Append("</w:tr>");
 
             double sumKL = 0;
@@ -797,7 +808,7 @@ namespace CiscoLDTLApp
                 sb.Append(Tc(it.DVT, 500, false, "center"));
                 sb.Append(Tc(FmtDec(it.KhoiLuong, 2), 600, false, "right"));
                 sb.Append(Tc(FmtInt(it.DonGia), 650, false, "right"));
-                sb.Append(Tc(FmtInt(it.ThanhTien), 750, false, "right"));
+                sb.Append(Tc(FmtMoney(it.ThanhTien), 750, false, "right"));
                 sb.Append("</w:tr>");
             }
 
@@ -807,7 +818,7 @@ namespace CiscoLDTLApp
             sb.Append(Tc("Công", 500, true, "center"));
             sb.Append(Tc(FmtDec(sumKL, 2), 600, true, "right"));
             sb.Append(Tc("", 650, true, "right"));
-            sb.Append(Tc(FmtInt(sumTT), 750, true, "right"));
+            sb.Append(Tc(FmtMoney(sumTT), 750, true, "right"));
             sb.Append("</w:tr>");
 
             sb.Append("</w:tbl>");
@@ -839,9 +850,9 @@ namespace CiscoLDTLApp
                 sb.Append("<w:tr>");
                 sb.Append(Tc("Stt", 400, true, "center"));
                 sb.Append(Tc("Mức", 800, true, "center"));
-                sb.Append(Tc("Đơn giá", 900, true, "center"));
+                sb.Append(Tc("Đơn giá (đ/ĐVT)", 900, true, "center"));
                 sb.Append(Tc("Công được hưởng", 1100, true, "center"));
-                sb.Append(Tc("Thành tiền", 1200, true, "center"));
+                sb.Append(Tc("Thành tiền (triệu đồng)", 1200, true, "center"));
                 sb.Append(Tc("Ghi chú", 600, true, "center"));
                 sb.Append("</w:tr>");
 
@@ -850,7 +861,7 @@ namespace CiscoLDTLApp
                 sb.Append(Tc("Mức 1", 800, false, "center"));
                 sb.Append(Tc("13.000", 900, false, "right"));
                 sb.Append(Tc(FmtDec(ws.BDDH_Muc1_Cong, 1), 1100, false, "right"));
-                sb.Append(Tc(FmtInt(ws.BDDH_Muc1_Tien), 1200, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.BDDH_Muc1_Tien), 1200, false, "right"));
                 sb.Append(Tc("", 600, false, "center"));
                 sb.Append("</w:tr>");
 
@@ -859,7 +870,7 @@ namespace CiscoLDTLApp
                 sb.Append(Tc("Mức 2", 800, false, "center"));
                 sb.Append(Tc("20.000", 900, false, "right"));
                 sb.Append(Tc(FmtDec(ws.BDDH_Muc2_Cong, 1), 1100, false, "right"));
-                sb.Append(Tc(FmtInt(ws.BDDH_Muc2_Tien), 1200, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.BDDH_Muc2_Tien), 1200, false, "right"));
                 sb.Append(Tc("", 600, false, "center"));
                 sb.Append("</w:tr>");
 
@@ -870,7 +881,7 @@ namespace CiscoLDTLApp
                     sb.Append(Tc("Mức 3", 800, false, "center"));
                     sb.Append(Tc("26.000", 900, false, "right"));
                     sb.Append(Tc(FmtDec(ws.BDDH_Muc3_Cong, 1), 1100, false, "right"));
-                    sb.Append(Tc(FmtInt(ws.BDDH_Muc3_Tien), 1200, false, "right"));
+                    sb.Append(Tc(FmtMoney(ws.BDDH_Muc3_Tien), 1200, false, "right"));
                     sb.Append(Tc("", 600, false, "center"));
                     sb.Append("</w:tr>");
                 }
@@ -881,7 +892,7 @@ namespace CiscoLDTLApp
                 sb.Append(Tc("Tổng", 800, true, "center"));
                 sb.Append(Tc("", 900, true, "center"));
                 sb.Append(Tc(FmtDec(tongC, 1), 1100, true, "right"));
-                sb.Append(Tc(FmtInt(ws.TongTienBDDH), 1200, true, "right"));
+                sb.Append(Tc(FmtMoney(ws.TongTienBDDH), 1200, true, "right"));
                 sb.Append(Tc("", 600, true, "center"));
                 sb.Append("</w:tr>");
             }
@@ -891,7 +902,7 @@ namespace CiscoLDTLApp
                 sb.Append("<w:tr>");
                 sb.Append(TcSpan("Stt", 250, true, "center", 1, "restart"));
                 sb.Append(TcSpan("Mức", 450, true, "center", 1, "restart"));
-                sb.Append(TcSpan("Đơn giá", 480, true, "center", 1, "restart"));
+                sb.Append(TcSpan("Đơn giá (đ/công)", 480, true, "center", 1, "restart"));
                 sb.Append(TcSpan(string.Format("Tháng {0}", ws.Thang), 1140, true, "center", 2, null));
                 sb.Append(TcSpan(tenQuy, 1140, true, "center", 2, null));
                 sb.Append(TcSpan(tenLK, 1190, true, "center", 2, null));
@@ -903,11 +914,11 @@ namespace CiscoLDTLApp
                 sb.Append(TcSpan("", 450, true, "center", 1, "continue"));
                 sb.Append(TcSpan("", 480, true, "center", 1, "continue"));
                 sb.Append(Tc("Công được hưởng", 480, true, "center"));
-                sb.Append(Tc("Thành tiền", 660, true, "center"));
+                sb.Append(Tc("Thành tiền (triệu đồng)", 660, true, "center"));
                 sb.Append(Tc("Công được hưởng", 480, true, "center"));
-                sb.Append(Tc("Thành tiền", 660, true, "center"));
+                sb.Append(Tc("Thành tiền (triệu đồng)", 660, true, "center"));
                 sb.Append(Tc("Công được hưởng", 500, true, "center"));
-                sb.Append(Tc("Thành tiền", 690, true, "center"));
+                sb.Append(Tc("Thành tiền (triệu đồng)", 690, true, "center"));
                 sb.Append(TcSpan("", 350, true, "center", 1, "continue"));
                 sb.Append("</w:tr>");
 
@@ -916,11 +927,11 @@ namespace CiscoLDTLApp
                 sb.Append(Tc("Mức 1", 450, false, "center"));
                 sb.Append(Tc("13.000", 480, false, "right"));
                 sb.Append(Tc(FmtDec(ws.BDDH_Muc1_Cong, 1), 480, false, "right"));
-                sb.Append(Tc(FmtInt(ws.BDDH_Muc1_Tien), 660, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.BDDH_Muc1_Tien), 660, false, "right"));
                 sb.Append(Tc(FmtDec(ws.KyQuy.BDDH_Muc1_Cong, 1), 480, false, "right"));
-                sb.Append(Tc(FmtInt(ws.KyQuy.BDDH_Muc1_Tien), 660, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.KyQuy.BDDH_Muc1_Tien), 660, false, "right"));
                 sb.Append(Tc(FmtDec(ws.KyLuyKe.BDDH_Muc1_Cong, 1), 500, false, "right"));
-                sb.Append(Tc(FmtInt(ws.KyLuyKe.BDDH_Muc1_Tien), 690, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.KyLuyKe.BDDH_Muc1_Tien), 690, false, "right"));
                 sb.Append(Tc("", 350, false, "center"));
                 sb.Append("</w:tr>");
 
@@ -929,11 +940,11 @@ namespace CiscoLDTLApp
                 sb.Append(Tc("Mức 2", 450, false, "center"));
                 sb.Append(Tc("20.000", 480, false, "right"));
                 sb.Append(Tc(FmtDec(ws.BDDH_Muc2_Cong, 1), 480, false, "right"));
-                sb.Append(Tc(FmtInt(ws.BDDH_Muc2_Tien), 660, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.BDDH_Muc2_Tien), 660, false, "right"));
                 sb.Append(Tc(FmtDec(ws.KyQuy.BDDH_Muc2_Cong, 1), 480, false, "right"));
-                sb.Append(Tc(FmtInt(ws.KyQuy.BDDH_Muc2_Tien), 660, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.KyQuy.BDDH_Muc2_Tien), 660, false, "right"));
                 sb.Append(Tc(FmtDec(ws.KyLuyKe.BDDH_Muc2_Cong, 1), 500, false, "right"));
-                sb.Append(Tc(FmtInt(ws.KyLuyKe.BDDH_Muc2_Tien), 690, false, "right"));
+                sb.Append(Tc(FmtMoney(ws.KyLuyKe.BDDH_Muc2_Tien), 690, false, "right"));
                 sb.Append(Tc("", 350, false, "center"));
                 sb.Append("</w:tr>");
 
@@ -944,11 +955,11 @@ namespace CiscoLDTLApp
                     sb.Append(Tc("Mức 3", 450, false, "center"));
                     sb.Append(Tc("26.000", 480, false, "right"));
                     sb.Append(Tc(FmtDec(ws.BDDH_Muc3_Cong, 1), 480, false, "right"));
-                    sb.Append(Tc(FmtInt(ws.BDDH_Muc3_Tien), 660, false, "right"));
+                    sb.Append(Tc(FmtMoney(ws.BDDH_Muc3_Tien), 660, false, "right"));
                     sb.Append(Tc(FmtDec(ws.KyQuy.BDDH_Muc3_Cong, 1), 480, false, "right"));
-                    sb.Append(Tc(FmtInt(ws.KyQuy.BDDH_Muc3_Tien), 660, false, "right"));
+                    sb.Append(Tc(FmtMoney(ws.KyQuy.BDDH_Muc3_Tien), 660, false, "right"));
                     sb.Append(Tc(FmtDec(ws.KyLuyKe.BDDH_Muc3_Cong, 1), 500, false, "right"));
-                    sb.Append(Tc(FmtInt(ws.KyLuyKe.BDDH_Muc3_Tien), 690, false, "right"));
+                    sb.Append(Tc(FmtMoney(ws.KyLuyKe.BDDH_Muc3_Tien), 690, false, "right"));
                     sb.Append(Tc("", 350, false, "center"));
                     sb.Append("</w:tr>");
                 }
@@ -962,11 +973,11 @@ namespace CiscoLDTLApp
                 sb.Append(Tc("Tổng", 450, true, "center"));
                 sb.Append(Tc("", 480, true, "center"));
                 sb.Append(Tc(FmtDec(cT, 1), 480, true, "right"));
-                sb.Append(Tc(FmtInt(ws.TongTienBDDH), 660, true, "right"));
+                sb.Append(Tc(FmtMoney(ws.TongTienBDDH), 660, true, "right"));
                 sb.Append(Tc(FmtDec(cQ, 1), 480, true, "right"));
-                sb.Append(Tc(FmtInt(ws.KyQuy.TongTienBDDH), 660, true, "right"));
+                sb.Append(Tc(FmtMoney(ws.KyQuy.TongTienBDDH), 660, true, "right"));
                 sb.Append(Tc(FmtDec(cLK, 1), 500, true, "right"));
-                sb.Append(Tc(FmtInt(ws.KyLuyKe.TongTienBDDH), 690, true, "right"));
+                sb.Append(Tc(FmtMoney(ws.KyLuyKe.TongTienBDDH), 690, true, "right"));
                 sb.Append(Tc("", 350, true, "center"));
                 sb.Append("</w:tr>");
             }

@@ -21,6 +21,7 @@ namespace CiscoLDTLApp
 
         public static void Validate(WorkshopData ws)
         {
+            ManagementProductionPayroll.UpdateFund(ws);
             if (double.IsNaN(ws.LuongSPQL) || double.IsInfinity(ws.LuongSPQL) || ws.LuongSPQL < 0)
                 throw new ArgumentException("Quỹ lương sản phẩm quản lý phải là số không âm.");
             if (double.IsNaN(ws.DieuChinhLuongQL) || double.IsInfinity(ws.DieuChinhLuongQL))
@@ -45,6 +46,7 @@ namespace CiscoLDTLApp
 
         public static void Calculate(WorkshopData ws, bool redistribute)
         {
+            ManagementProductionPayroll.UpdateFund(ws);
             double weights = 0, other = 0;
             bool hasManagement = false;
             foreach (var e in ws.ListNhanVien)

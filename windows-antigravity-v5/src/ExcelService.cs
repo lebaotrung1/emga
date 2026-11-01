@@ -420,13 +420,13 @@ namespace CiscoLDTLApp
                     tk.SanLuongKH = GetCellDouble(doc, ss, "C43", tk.SanLuongKH);
                     tk.SanLuongTH = Math.Round(GetCellDouble(doc, ss, "C46", tk.SanLuongTH), 3);
                     tk.SanLuongTinhLuong = Math.Round(GetCellDouble(doc, ss, "D57", tk.SanLuongTinhLuong), 2);
-                    tk.SanLuongLoai1 = Math.Round(GetCellDouble(doc, ss, "D60", tk.SanLuongLoai1), 3);
+                    tk.SanLuongLoai1 = GetCellDouble(doc, ss, "D60", tk.SanLuongLoai1);
                     tk.DonGiaLoai1 = Math.Round(GetCellDouble(doc, ss, "I60", tk.DonGiaLoai1), 2);
                     tk.ThanhTienLoai1 = Math.Round(GetCellDouble(doc, ss, "J60", tk.ThanhTienLoai1), 0);
-                    tk.SanLuongLoai2 = Math.Round(GetCellDouble(doc, ss, "D61", tk.SanLuongLoai2), 3);
+                    tk.SanLuongLoai2 = GetCellDouble(doc, ss, "D61", tk.SanLuongLoai2);
                     tk.DonGiaLoai2 = GetCellDouble(doc, ss, "I61", 0);
                     tk.ThanhTienLoai2 = GetCellDouble(doc, ss, "J61", 0);
-                    tk.SanLuongLe = Math.Round(GetCellDouble(doc, ss, "D63", tk.SanLuongLe), 3);
+                    tk.SanLuongLe = GetCellDouble(doc, ss, "D63", tk.SanLuongLe);
                     tk.DonGiaLe = Math.Round(GetCellDouble(doc, ss, "I63", tk.DonGiaLe), 2);
                     tk.ThanhTienLe = Math.Round(GetCellDouble(doc, ss, "J63", tk.ThanhTienLe), 0);
 
@@ -479,13 +479,13 @@ namespace CiscoLDTLApp
                     lg.SanLuongKH = Math.Round(GetCellDouble(doc, ss, "C24", lg.SanLuongKH), 2);
                     lg.SanLuongTH = Math.Round(GetCellDouble(doc, ss, "D51", lg.SanLuongTH), 2);
                     lg.SanLuongTinhLuong = lg.SanLuongTH;
-                    lg.SanLuongLoai1 = Math.Round(GetCellDouble(doc, ss, "D52", lg.SanLuongLoai1), 2);
+                    lg.SanLuongLoai1 = GetCellDouble(doc, ss, "D52", lg.SanLuongLoai1);
                     lg.DonGiaLoai1 = Math.Round(GetCellDouble(doc, ss, "I52", lg.DonGiaLoai1), 2);
                     lg.ThanhTienLoai1 = Math.Round(GetCellDouble(doc, ss, "J52", lg.ThanhTienLoai1), 0);
-                    lg.SanLuongLoai2 = Math.Round(GetCellDouble(doc, ss, "D53", lg.SanLuongLoai2), 2);
+                    lg.SanLuongLoai2 = GetCellDouble(doc, ss, "D53", lg.SanLuongLoai2);
                     lg.DonGiaLoai2 = Math.Round(GetCellDouble(doc, ss, "I53", lg.DonGiaLoai2), 2);
                     lg.ThanhTienLoai2 = Math.Round(GetCellDouble(doc, ss, "J53", lg.ThanhTienLoai2), 0);
-                    lg.SanLuongLe = Math.Round(GetCellDouble(doc, ss, "D55", lg.SanLuongLe), 2);
+                    lg.SanLuongLe = GetCellDouble(doc, ss, "D55", lg.SanLuongLe);
                     lg.DonGiaLe = Math.Round(GetCellDouble(doc, ss, "I55", lg.DonGiaLe), 2);
                     lg.ThanhTienLe = Math.Round(GetCellDouble(doc, ss, "J55", lg.ThanhTienLe), 0);
 
@@ -534,14 +534,14 @@ namespace CiscoLDTLApp
                     lt.SanLuongKH = Math.Round(GetCellDouble(doc, ss, "C24", lt.SanLuongKH), 2);
                     lt.SanLuongTH = Math.Round(GetCellDouble(doc, ss, "C28", lt.SanLuongTH), 2);
                     lt.SanLuongTinhLuong = Math.Round(GetCellDouble(doc, ss, "D36", lt.SanLuongTinhLuong), 2);
-                    lt.SanLuongLoai1 = Math.Round(GetCellDouble(doc, ss, "D37", lt.SanLuongLoai1), 2);
+                    lt.SanLuongLoai1 = GetCellDouble(doc, ss, "D37", lt.SanLuongLoai1);
                     lt.DonGiaLoai1 = Math.Round(GetCellDouble(doc, ss, "I37", lt.DonGiaLoai1), 2);
                     lt.ThanhTienLoai1 = Math.Round(GetCellDouble(doc, ss, "J37", lt.ThanhTienLoai1), 0);
-                    lt.SanLuongLoai2 = Math.Round(GetCellDouble(doc, ss, "D38", lt.SanLuongLoai2), 2);
+                    lt.SanLuongLoai2 = GetCellDouble(doc, ss, "D38", lt.SanLuongLoai2);
                     lt.DonGiaLoai2 = GetCellDouble(doc, ss, "I38", 0);
                     lt.ThanhTienLoai2 = GetCellDouble(doc, ss, "J38", 0);
                     lt.ThanhTienLoai2 = Math.Round(GetCellDouble(doc, ss, "J38", lt.ThanhTienLoai2), 0);
-                    lt.SanLuongLe = Math.Round(GetCellDouble(doc, ss, "D43", lt.SanLuongLe), 2);
+                    lt.SanLuongLe = GetCellDouble(doc, ss, "D43", lt.SanLuongLe);
                     lt.DonGiaLe = GetCellDouble(doc, ss, "I43", 0);
                     lt.ThanhTienLe = Math.Round(GetCellDouble(doc, ss, "J43", lt.ThanhTienLe), 0);
                     lt.SanLuongPhuKL = Math.Round(GetCellDouble(doc, ss, "D44", lt.SanLuongPhuKL), 2);
@@ -672,7 +672,10 @@ namespace CiscoLDTLApp
 
             using (var fs = new FileStream(excelPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (var zip = new ZipArchive(fs, ZipArchiveMode.Read))
+            {
                 LoadAdditionalEmployees(zip, workshops);
+                LoadManagementProductionSettings(zip, workshops);
+            }
             return workshops;
         }
 
@@ -1242,6 +1245,7 @@ namespace CiscoLDTLApp
 
                 // Bật cờ fullCalcOnLoad="1" trong xl/workbook.xml để khi mở bằng Excel, mọi công thức tự động tính toán lại 100%
                 SaveAdditionalEmployees(zip, workshops);
+                SaveManagementProductionSettings(zip, workshops);
                 SaveManagementPayrollReport(zip, workshops);
                 EnsureFullCalcOnLoad(zip);
             }
@@ -1319,6 +1323,60 @@ namespace CiscoLDTLApp
                     rowNumber++;
                 }
             SaveSheetXml(zip, path, doc);
+        }
+
+        private static void SaveManagementProductionSettings(ZipArchive zip, List<WorkshopData> workshops)
+        {
+            bool enabled=false;
+            foreach(var ws in workshops) if(ws.TinhQuyQLTuSanLuong) enabled=true;
+            if(!enabled) return;
+            string path=EnsureWorksheet(zip,"Quy QL san luong","xl/worksheets/ciscoManagementProduction.xml");
+            var doc=new XmlDocument();
+            doc.LoadXml("<worksheet xmlns='"+NsMain+"'><sheetData/></worksheet>");
+            string[] names={"MaPX","TinhTuSanLuong","DonGiaQLLoai1","DonGiaQLLoai2","SanLuongLoai1","SanLuongLoai2","SanLuongLe"};
+            for(int col=0;col<names.Length;col++) SetCellInlineString(doc,TimesheetImporter.ColName(col+1)+"1",names[col],false);
+            int row=2;
+            foreach(var ws in workshops)
+            {
+                SetCellInlineString(doc,"A"+row,ws.MaPX,false);
+                SetCellInlineString(doc,"B"+row,ws.TinhQuyQLTuSanLuong?"True":"False",false);
+                double[] values={ws.DonGiaQLLoai1,ws.DonGiaQLLoai2,ws.SanLuongLoai1,ws.SanLuongLoai2,ws.SanLuongLe};
+                for(int col=0;col<values.Length;col++) SetCellNumeric(doc,TimesheetImporter.ColName(col+3)+row,values[col],false);
+                row++;
+            }
+            SaveSheetXml(zip,path,doc);
+        }
+
+        private static void LoadManagementProductionSettings(ZipArchive zip, List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip); string path;
+            if(!map.TryGetValue("Quy QL san luong",out path)) return;
+            var doc=LoadSheetXml(zip,path); var strings=LoadSharedStrings(zip);
+            foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain))
+            {
+                int number=int.Parse(row.GetAttribute("r")); if(number<2) continue;
+                string code=GetCellString(doc,strings,"A"+number);
+                foreach(var ws in workshops)
+                {
+                    if(ws.MaPX!=code) continue;
+                    ws.TinhQuyQLTuSanLuong=GetCellString(doc,strings,"B"+number)=="True";
+                    ws.DonGiaQLLoai1=GetCellDouble(doc,strings,"C"+number,0);
+                    ws.DonGiaQLLoai2=GetCellDouble(doc,strings,"D"+number,0);
+                    // PX có ba dòng trong NT đọc sản lượng từ chính sheet NT; đơn vị khác dùng đầu vào v5.3 đã lưu.
+                    if(ws.MaPX!="TK" && ws.MaPX!="LG" && ws.MaPX!="LT")
+                    {
+                        ws.SanLuongLoai1=GetCellDouble(doc,strings,"E"+number,0);
+                        ws.SanLuongLoai2=GetCellDouble(doc,strings,"F"+number,0);
+                        ws.SanLuongLe=GetCellDouble(doc,strings,"G"+number,0);
+                    }
+                    if(ws.TinhQuyQLTuSanLuong)
+                    {
+                        ManagementPayroll.Calculate(ws,true);
+                        ws.RecalculateDerived();
+                        ws.CanhBaoQuyQuanLy="Quỹ quản lý tự tính từ sản lượng và đơn giá quản lý đã lưu.";
+                    }
+                }
+            }
         }
 
         private static void SaveManagementPayrollReport(ZipArchive zip, List<WorkshopData> workshops)

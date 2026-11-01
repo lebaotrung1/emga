@@ -1,3 +1,7 @@
+# Bản hiện hành: v5.3
+
+Hướng dẫn sử dụng/công thức hiện hành nằm trong **README.md**. Các mục v5/v5.1/v5.2 dưới đây là lịch sử; cách nhập tổng quỹ quản lý bằng tay được thay bằng sản lượng × đơn giá quản lý ở v5.3.
+
 # Bản v5 — tính lương quản lý từng phân xưởng
 
 ## Cách dùng
@@ -60,3 +64,11 @@ Thêm FrameworkCompatibilityTests: đọc IL của EXE để kiểm tra chính x
 Nguyên nhân: mã cũ chỉ tính lại khi cả sản lượng và đơn giá > 0; xóa đầu vào không xóa kết quả cũ. Luyện thép còn thiếu đọc đơn giá loại 2 và ngày lễ từ Excel. Đã thêm tính lại theo sự kiện sửa đầu vào (kể cả trống/0), khóa các ô thành tiền L1/L2/lễ, cập nhật phần chênh vào quỹ SP trực tiếp và phân bổ lại lương cá nhân. Giữ các khoản quỹ không thuộc dòng vừa sửa; không tự tính quỹ quản lý từ sản lượng. Không tự cân đối lại sản lượng các dòng khác khi sửa một dòng. Ngày lễ Luyện gang làm tròn 1.000đ, L1/L2 và ngày lễ Thiêu kết/Luyện thép làm tròn 100đ theo công thức Excel nguồn.
 
 ProductionPayrollTests: 26 kiểm tra mô hình và lưu–mở Excel đạt; 24 kiểm tra mô hình/giao diện đạt, bao gồm xóa sản lượng lễ, khôi phục, đơn giá 0, thành tiền chỉ đọc, quỹ SP và lương từng người về 0, tổng quý và tránh trừ chênh nhiều lần. Các bộ 64 kiểm tra lương/Excel, hồi quy nạp nhân sự và kiểm tra chữ ký Split tương thích .NET Framework tiếp tục đạt. Các kiểm tra có Excel dùng dữ liệu riêng ngoài kho Git, không đưa lên GitHub. Bản v5.2 vẫn biên dịch bằng reference assemblies .NET Framework 4.5 chính thức; chưa chạy trực tiếp trên Windows.
+
+## v5.3 — quỹ quản lý theo sản lượng, Word triệu đồng
+
+Người dùng xác nhận: tách loại 1/loại 2/ngày lễ; nhập đơn giá quản lý L1/L2 và đơn giá lễ tự bằng 2 × đơn giá L1. Thêm công thức quỹ là tổng 3 dòng sản lượng × đơn giá, làm tròn từng dòng đến đồng. Form hiển thị sản lượng nguồn và thành tiền/quỹ chỉ đọc; giá quản lý tách khỏi giá trực tiếp. Áp dụng lưu cấu hình PX; sửa sản lượng sau đó tự cập nhật quỹ và phân bổ. Đơn giá được lưu trong sheet Quy QL san luong; đọc lại chính xác, kể cả 0 và phần thập phân. Nguồn TK/LG/LT giữ độ chính xác sản lượng; CDNL/KT dùng đầu vào ba dòng riêng do ánh xạ cũ không có các dòng tương đương. Quỹ cũ giữ nguyên cho đến khi người dùng nhập đơn giá và áp dụng, không tự suy đơn giá.
+
+Word: chuyển mọi khoản thành tiền, quỹ tháng/quý/lũy kế, bình quân (đúng hệ số nghìn đồng), GNV, BDĐH, chi tiết nhân viên sang triệu đồng, đúng một chữ số thập phân vi-VN; số nguyên và số 0 vẫn có ,0. Đơn giá theo công/đơn vị có nhãn đồng riêng để không làm mất các mức nhỏ. Không đổi số liệu tính toán/Excel, không đổi định dạng số lượng/công, không chuyển đơn vị lần hai khi cập nhật mẫu. Các biên bản lịch sử trước phần đang cập nhật được giữ nguyên.
+
+382 kiểm tra mới đạt: mô hình quỹ/đơn giá lễ tự gấp đôi, sản lượng/đơn giá 0, giá quản lý độc lập trực tiếp, lưu/mở lại hai lần trên 5 PX; xuất mới và cập nhật 50 DOCX giả (5 PX × 5 kỳ × 2 đường xuất), đọc XML kiểm tra đơn vị và giá trị tiền, bảng chi tiết, đổi bình quân từ nghìn đúng hệ số, độ chính xác cố định một số lẻ. Smoke test giao diện bổ sung nhập đơn giá, quỹ chỉ đọc, tự nhân đôi giá lễ, xem trước không ghi, áp dụng lưu, hủy không đổi; đạt. Các bộ kiểm thử cũ tiếp tục đạt. Chưa chạy trực tiếp trên Windows/Microsoft Word. Không đưa dữ liệu hoặc DOCX kiểm thử lên GitHub.

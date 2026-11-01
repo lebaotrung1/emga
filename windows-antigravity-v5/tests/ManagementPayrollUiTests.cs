@@ -9,7 +9,7 @@ class ManagementPayrollUiTests
     [STAThread] static int Main()
     {
         Application.EnableVisualStyles();
-        var w=new WorkshopData { TenPX="Phân xưởng kiểm thử", MaPX="TK", LuongSPQL=1000000 };
+        var w=new WorkshopData { TenPX="Phân xưởng kiểm thử", MaPX="TK", LuongSPQL=1000000, SanLuongLoai1=10, DonGiaQLLoai1=100000 };
         w.ListNhanVien.Clear();
         w.ListNhanVien.Add(new EmployeeRecord { HoTen="Nhân sự giả", LaQuanLy=true, HeSoCoDinh=2, CongSP=26, XepLoai="A", QuanLyTinhMoi=true });
         var preview=typeof(ManagementPayrollForm).GetMethod("Preview",BindingFlags.NonPublic|BindingFlags.Instance);
@@ -25,6 +25,28 @@ class ManagementPayrollUiTests
         {
             f.Show(); Application.DoEvents(); f.Close();
             Check(w.ListNhanVien[0].LuongSanPham==1000000,"Close preserves saved state");
+        }
+        w.SanLuongLoai2=2; w.SanLuongLe=1;
+        using(var f=new ManagementPayrollForm(w))
+        {
+            f.Show(); Application.DoEvents();
+            var first=(NumericUpDown)typeof(ManagementPayrollForm).GetField("price1",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(f);
+            var second=(NumericUpDown)typeof(ManagementPayrollForm).GetField("price2",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(f);
+            var fund=(NumericUpDown)typeof(ManagementPayrollForm).GetField("fund",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(f);
+            first.Value=200000; second.Value=50000; Application.DoEvents();
+            Check(fund.Value==2500000 && !fund.Enabled,"UI fund is computed from 3 production lines, not editable");
+            Check(w.DonGiaQLLoai1==100000,"Unapplied rate edits isolated");
+            var holiday=(Label)typeof(ManagementPayrollForm).GetField("holidayPrice",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(f);
+            Check(holiday.Text.Contains("400.000"),"Holiday management price automatically doubles L1");
+            first.Value=0; Application.DoEvents(); Check(fund.Value==100000,"Zero L1 rate also clears holiday fund");
+            first.Value=200000; preview.Invoke(f,new object[]{true});
+            Check(w.TinhQuyQLTuSanLuong && w.LuongSPQL==2500000 && w.ListNhanVien[0].LuongSanPham==2500000,"Apply saves rates and allocates calculated fund");
+        }
+        using(var f=new ManagementPayrollForm(w))
+        {
+            var first=(NumericUpDown)typeof(ManagementPayrollForm).GetField("price1",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(f);
+            first.Value=300000; f.Close();
+            Check(w.DonGiaQLLoai1==200000 && w.LuongSPQL==2500000,"Cancel does not persist changed rate");
         }
         using(var main=new MainForm())
         {

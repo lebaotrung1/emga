@@ -15,4 +15,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Production payroll test build failed' }
     & .\ProductionPayrollTests.exe
     if ($LASTEXITCODE -ne 0) { throw 'Production payroll tests failed' }
+    & $csc /nologo /target:exe /out:ManagementProductionAndWordTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll tests/ManagementProductionAndWordTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Management production and Word test build failed' }
+    & .\ManagementProductionAndWordTests.exe
+    if ($LASTEXITCODE -ne 0) { throw 'Management production and Word tests failed' }
 } finally { Pop-Location }

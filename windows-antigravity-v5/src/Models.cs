@@ -308,6 +308,13 @@ namespace CiscoLDTLApp
         public string LyDoTruLuong { get; set; }
 
         public double TongLuongQL { get; set; }
+        public bool TinhQuyQLTuSanLuong { get; set; }
+        public double DonGiaQLLoai1 { get; set; }
+        public double DonGiaQLLoai2 { get; set; }
+        public double DonGiaQLLe { get { return DonGiaQLLoai1 * 2; } }
+        public double ThanhTienQLLoai1 { get { return ManagementPayroll.RoundMoney(SanLuongLoai1 * DonGiaQLLoai1, 1); } }
+        public double ThanhTienQLLoai2 { get { return ManagementPayroll.RoundMoney(SanLuongLoai2 * DonGiaQLLoai2, 1); } }
+        public double ThanhTienQLLe { get { return ManagementPayroll.RoundMoney(SanLuongLe * DonGiaQLLe, 1); } }
         public string CanhBaoQuyQuanLy { get; set; }
         public double LuongSPQL { get; set; }
         public double LuongCheDoQL { get; set; }
@@ -726,6 +733,7 @@ namespace CiscoLDTLApp
 
         public void RecalculateDerived()
         {
+            ManagementProductionPayroll.UpdateFund(this);
             LDCuoiKy = LDDauKy + LDTang - LDGiam;
             CongLDTT = CongSP - CongQL;
             TongCong = CongSP + CongLePhepCD + CongBHXH;

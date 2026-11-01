@@ -58,7 +58,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.2";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.3";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -247,7 +247,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.2)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.3)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
