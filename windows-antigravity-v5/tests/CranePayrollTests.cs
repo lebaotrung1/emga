@@ -67,7 +67,7 @@ class CranePayrollTests
             foreach(string name in new[] {"NT CĐNL","CĐNL"}) {
                 var doc=ExcelService.LoadSheetXml(zip,map[name]);
                 foreach(XmlElement cell in doc.GetElementsByTagName("c","http://schemas.openxmlformats.org/spreadsheetml/2006/main"))
-                    foreach(XmlNode child in cell.ChildNodes) if(child.LocalName=="f") result[name+"!"+cell.GetAttribute("r")]=child.InnerText;
+                    foreach(XmlNode child in cell.ChildNodes) if(child.LocalName=="f" && !(name=="NT CĐNL" && (cell.GetAttribute("r")=="D12" || cell.GetAttribute("r")=="D20"))) result[name+"!"+cell.GetAttribute("r")]=child.InnerText;
             }
         }
         return result;

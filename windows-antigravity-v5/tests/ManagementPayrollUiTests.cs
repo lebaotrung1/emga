@@ -11,11 +11,14 @@ class ManagementPayrollUiTests
         Application.EnableVisualStyles();
         var w=new WorkshopData { TenPX="Phân xưởng kiểm thử", MaPX="TK", LuongSPQL=1000000, SanLuongLoai1=10, DonGiaQLLoai1=100000 };
         w.ListNhanVien.Clear();
-        w.ListNhanVien.Add(new EmployeeRecord { HoTen="Nhân sự giả", LaQuanLy=true, HeSoCoDinh=2, CongSP=26, XepLoai="A", QuanLyTinhMoi=true });
+        w.ListNhanVien.Add(new EmployeeRecord { HoTen="Nhân sự giả", ChucDanh="QĐ", LaQuanLy=true, HeSoCoDinh=2, CongSP=26, XepLoai="A", QuanLyTinhMoi=true });
+        w.ListNhanVien.Add(new EmployeeRecord { HoTen="Trưởng ca giả", ChucDanh="TRC", LaQuanLy=true, QuanLyTinhMoi=true, CongSP=26, LuongSanPham=1234 });
         var preview=typeof(ManagementPayrollForm).GetMethod("Preview",BindingFlags.NonPublic|BindingFlags.Instance);
         using(var f=new ManagementPayrollForm(w))
         {
             f.Show(); Application.DoEvents();
+            var grid=(DataGridView)typeof(ManagementPayrollForm).GetField("grid",BindingFlags.NonPublic|BindingFlags.Instance).GetValue(f);
+            Check(grid.Rows.Count==1 && !w.ListNhanVien[1].LaQuanLy,"Direct shift leader excluded even with stale management flag");
             preview.Invoke(f,new object[]{false}); Application.DoEvents();
             Check(w.ListNhanVien[0].LuongSanPham==0,"Preview must not mutate original");
             preview.Invoke(f,new object[]{true});
@@ -48,6 +51,7 @@ class ManagementPayrollUiTests
             first.Value=300000; f.Close();
             Check(w.DonGiaQLLoai1==200000 && w.LuongSPQL==2500000,"Cancel does not persist changed rate");
         }
+        Check(w.ListNhanVien[1].LuongSanPham==1234 && !w.ListNhanVien[1].QuanLyTinhMoi,"Management application never reallocates shift leader salary");
         using(var main=new MainForm())
         {
             main.Show(); Application.DoEvents();

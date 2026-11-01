@@ -95,7 +95,7 @@ class CdnlPayrollTests
         w.Cdnl.Apply(w); Check(fresh.LuongSanPham==9000,"New employee explicit department/weight/rate accepted without common pool");
         fresh.CongLePhep=1; Check(!w.Cdnl.Preview(w).Valid,"No fabricated holiday/leave formula for new employee without source row");
         w=Example(); b=w.Cdnl.Book; w.TinhQuyQLTuSanLuong=true; w.SanLuongLoai1=10; w.DonGiaQLLoai1=100;
-        var manager=new EmployeeRecord { ExcelRow=5,SDB="FAKE004",HoTen="Quản lý giả",LaQuanLy=true,CongSP=26,HeSoCoDinh=2,XepLoai="A" }; w.ListNhanVien.Add(manager);
+        var manager=new EmployeeRecord { ExcelRow=5,SDB="FAKE004",HoTen="Quản lý giả",ChucDanh="QĐ", LaQuanLy=true,CongSP=26,HeSoCoDinh=2,XepLoai="A" }; w.ListNhanVien.Add(manager);
         Formula(b,"NT CĐNL","I422","#REF!"); Formula(b,"CĐNL","AB5","#REF!");
         w.Cdnl.Apply(w); Check(w.LuongSPQL==1000 && manager.LuongSanPham==1000,"Opted-in management production rate remains independent from original broken source formula");
     }

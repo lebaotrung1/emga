@@ -231,7 +231,7 @@ namespace CiscoLDTLApp
                                 MucLuongBHXH = source == null ? 0 : source.MucLuongBHXH,
                                 PhuCapChucVu = source == null ? 0 : source.PhuCapChucVu,
                                 HeSoCoDinh = source == null ? 0 : source.HeSoCoDinh,
-                                LaQuanLy = NormName(currentTeam).Contains("quản lý")
+                                LaQuanLy = source != null && EmployeeClassification.IsManagementRole(source.ChucDanh)
                             };
                             if (source == null || string.IsNullOrWhiteSpace(currentTeam))
                                 candidate = requestEmployee == null ? null : requestEmployee(candidate);
@@ -242,6 +242,7 @@ namespace CiscoLDTLApp
                                 continue;
                             }
                             emp = candidate;
+                            EmployeeClassification.Apply(emp);
                             emp.STT = ws.ListNhanVien.Count + 1;
                             ws.ListNhanVien.Add(emp);
                             byKey[identity] = emp;
@@ -250,13 +251,14 @@ namespace CiscoLDTLApp
                         if (lay.Kind == SheetKind.Cong && !string.IsNullOrWhiteSpace(currentTeam))
                         {
                             emp.ToSanXuat = emp.BoPhan = currentTeam;
-                            emp.LaQuanLy = NormName(currentTeam).Contains("quản lý");
+                            EmployeeClassification.Apply(emp);
                         }
                         ok++;
 
                         switch (lay.Kind)
                         {
                             case SheetKind.Cong:
+                                emp.AttendanceEdited=true;
                                 if (touchedCong.Add(emp))
                                 {
                                     emp.CongSP = 0; emp.CongHocHop = 0; emp.CongVHTT = 0;

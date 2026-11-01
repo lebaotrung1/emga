@@ -1,3 +1,16 @@
+# Antigravity v5.7 — phân loại quản lý và giữ công khi lưu Excel
+
+Tải [antigravity_v5_7_program_only.zip](antigravity_v5_7_program_only.zip). Đóng ứng dụng, giải nén và thay EXE/launcher trong thư mục đang dùng. Giữ **Data**, **Templates**; mở một bản sao Excel để đối chiếu trước. Tiêu đề ứng dụng hiện **v5.7**; EXE **5.7.0.0**.
+
+- Quản lý chỉ gồm **quản đốc, phó quản đốc, KTV, TK** (hỗ trợ chữ viết tắt trong Excel). **Tổ trưởng, trưởng ca, phó ca, tổ phó** là lao động trực tiếp. Chương trình xét chức danh, không suy từ tên tổ hay cờ quản lý của bản cũ. Bảng nhân sự có cột **Phân loại LĐ**; cửa sổ tính lương quản lý chỉ nhận các chức danh hợp lệ. Số người và số công quản lý trong nghiệm thu được cập nhật cùng phân loại.
+- Sửa lỗi dòng trống công của một PX ghi đè công đang có ở PX khác. Đối chiếu bằng **SDB + họ tên**, ghi Tổng hợp công một lần. Trường hợp trùng dòng tổng hợp dùng vùng INDEX/MATCH gốc để xác định, không chọn tùy ý dòng đầu. Nếu hai PX có công khác nhau hoặc không xác định được dòng nguồn, dừng lưu và báo để đối chiếu; không tự cộng công.
+- Sửa công về 0 vẫn được lưu. Giữ các công độc lập ở cột P/Q trong tổng công khác; lưu công K3 vào cột riêng. Lưu trên tệp tạm rồi thay tệp chính sau khi hoàn tất, để lỗi giữa chừng không làm hỏng Excel gốc.
+- Giữ nạp công/ăn ca/BDĐH, cẩu phôi ba công đoạn, đơn giá quản lý riêng, GNV và Word triệu đồng một số lẻ. Không thay Nghiệm Thu Studio. Gói không có Excel hoặc dữ liệu người dùng.
+
+Đã kiểm tra phân loại, dữ liệu công trùng giữa PX, xung đột, sửa về 0, lưu–mở lặp và giao diện trên Linux/Mono với tham chiếu .NET Framework 4.5; chưa chạy trực tiếp trên Windows. Tệp Excel nguồn có một số ô lỗi sẵn: kiểm tra tra cứu công được cô lập khỏi các ô mã lỗi trong bộ tính thử, không sửa các ô lỗi đó trong dữ liệu của người dùng. Nếu tệp đã bị mất công ở bản cũ, cần mở lại bản sao còn đủ công hoặc nạp lại bảng công; bản mới không thể tự đoán lại số công đã mất.
+
+---
+
 # Antigravity v5.6 — tính lương CĐNL từng bộ phận
 
 Tải **antigravity_v5_6_program_only.zip** trên nhánh `antigravity-payroll-v5`. Đóng bản cũ, sao lưu Excel, giải nén rồi thay EXE/launcher; giữ nguyên Data và Templates. Tiêu đề v5.6, phiên bản EXE 5.6.0.0. Không chứa dữ liệu người dùng.

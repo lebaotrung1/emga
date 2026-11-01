@@ -18,6 +18,7 @@ namespace CiscoLDTLApp
 
         public ManagementPayrollForm(WorkshopData ws)
         {
+            EmployeeClassification.Apply(ws);
             original = ws;
             draft = new WorkshopData { MaPX = ws.MaPX, LuongSPQL = ws.LuongSPQL, DieuChinhLuongQL = ws.DieuChinhLuongQL };
             draft.SanLuongLoai1 = ws.SanLuongLoai1;
@@ -86,7 +87,7 @@ namespace CiscoLDTLApp
             price1.ValueChanged += updateFund; price2.ValueChanged += updateFund; updateFund(this,EventArgs.Empty);
             var note = new Label { Dock = DockStyle.Top, Height = 115, Padding = new Padding(8), Text =
                 "Nhập đơn giá L1/L2; ngày lễ = 2 × L1. Muốn sửa sản lượng, đóng cửa sổ và sửa tại bảng sản xuất của phân xưởng.\n" +
-                "Chỉ gồm người được đánh dấu quản lý của phân xưởng đang chọn.\n" +
+                "Chỉ QĐ, PQĐ, KTV, TK theo chức danh; không gồm tổ trưởng, trưởng ca, phó ca.\n" +
                 "Hệ số hưởng = ROUND(ROUND(Công SP × Hệ số / 26; 2) × Xếp loại; 2); A=100%, B=90%, C=80%. Lương SP phân bổ theo hệ số hưởng, làm tròn 100đ.\n" +
                 "Phép = Công phép × Lương BHXH / 26 (tròn 100đ); Học/họp 250.000đ/công; VHTT 300.000đ/công theo quy tắc bảng NT hiện có. Làm lễ và phụ cấp: nhập số tiền đã duyệt.\n" +
                 "Quỹ SP tự tính từ ba dòng sản lượng × đơn giá quản lý; đơn giá này độc lập với đơn giá lao động trực tiếp. Điều chỉnh chung chỉ cộng ở tổng PX, chưa phân bổ cho cá nhân." };

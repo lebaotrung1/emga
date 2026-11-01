@@ -75,6 +75,7 @@ namespace CiscoLDTLApp
         void Bind(WorkshopData ws)
         {
             Book.Values.Clear(); Book.TextValues.Clear(); Book.Reset();
+            MasterAttendancePlan.FromBook(Book,Workshops).Bind(Book);
             foreach(var unit in Workshops) {
                 string s=unit.MaPX=="TK"?"NT thiêu kết":unit.MaPX=="LG"?"NT gang":unit.MaPX=="LT"?"NT Thép":null;
                 if(s==null) continue;
@@ -123,6 +124,7 @@ namespace CiscoLDTLApp
         public CdnlResult Preview(WorkshopData ws)
         {
             if(ws.MaPX!="CDNL") throw new ArgumentException("Chỉ tính CĐNL.");
+            EmployeeClassification.Apply(ws);
             Bind(ws); var result=new CdnlResult();
             WorkshopData management=null;
             if(ws.TinhQuyQLTuSanLuong) {
@@ -155,6 +157,7 @@ namespace CiscoLDTLApp
                     bool missingPay=!Book.Cells.TryGetValue("CĐNL!AD"+row,out sourcePay) || (string.IsNullOrEmpty(sourcePay.Formula) && !sourcePay.IsNumber && string.IsNullOrEmpty(sourcePay.Text));
                     CdnlOverride approvedPay; bool approved=Overrides.TryGetValue("CĐNL!AD"+row,out approvedPay) && approvedPay.Active;
                     if(e.CongSP!=0 && missingPay && !approved) { result.Errors["CĐNL!AD"+row]="Có công sản phẩm nhưng thiếu công thức/thành tiền AD nguồn. Khai báo nhóm, điểm, đơn giá và lý do tại tab Phân bổ hoặc nạp nguồn đầy đủ."; result.InvalidEmployees.Add(e); continue; }
+                    if(!e.LaQuanLy && SourceGroup(e)=="I422") { result.Errors["CĐNL!AD"+row]="Chức danh không thuộc quản lý nhưng AD đang dùng đơn giá quản lý AJ168. Chọn đúng nhóm trực tiếp và quy tắc tại tab Phân bổ."; result.InvalidEmployees.Add(e); continue; }
                     copy.HeSoHuong=Eval(result,"CĐNL","AB"+row);
                     copy.LuongSanPham=Eval(result,"CĐNL","AD"+row);
                 }

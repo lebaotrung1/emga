@@ -359,6 +359,8 @@ namespace CiscoLDTLApp
                 // 0. Đọc bảng 'Tổng hợp công' (danh sách gốc toàn công ty) để ánh xạ SDB -> Dòng trong Tổng hợp công
                 var thcBySdb = new Dictionary<string, TongHopCongEntry>(StringComparer.OrdinalIgnoreCase);
                 var thcByName = new Dictionary<string, TongHopCongEntry>(StringComparer.OrdinalIgnoreCase);
+                var masterEntries=new Dictionary<int,TongHopCongEntry>();
+                var masterIdentities=new Dictionary<string,List<int>>(StringComparer.OrdinalIgnoreCase);
                 if (sheetMap.ContainsKey("Tổng hợp công"))
                 {
                     var thcDoc = LoadSheetXml(zip, sheetMap["Tổng hợp công"]);
@@ -387,12 +389,12 @@ namespace CiscoLDTLApp
                                 LuongPhepLe = GetCellDouble(thcDoc, ss, "AB" + r, 0),
                                 CongAnCa = GetCellDouble(thcDoc, ss, "AF" + r, 0)
                             };
-                            string normSdb = NormalizeSDB(sdb);
-                            if (!string.IsNullOrEmpty(normSdb) && !thcBySdb.ContainsKey(normSdb))
-                                thcBySdb[normSdb] = entry;
+                            masterEntries[r]=entry;
+                            string normSdb = MasterAttendancePlan.Identity(sdb,name);
+                            if(normSdb!="") { List<int> rows; if(!masterIdentities.TryGetValue(normSdb,out rows)) { rows=new List<int>(); masterIdentities[normSdb]=rows; } rows.Add(r); }
+                            if(!string.IsNullOrEmpty(normSdb)) { if(thcBySdb.ContainsKey(normSdb)) thcBySdb[normSdb]=null; else thcBySdb[normSdb]=entry; }
                             string normName = NormalizeKey(name);
-                            if (!string.IsNullOrEmpty(normName) && !thcByName.ContainsKey(normName))
-                                thcByName[normName] = entry;
+                            if(!string.IsNullOrEmpty(normName)) { if(thcByName.ContainsKey(normName)) thcByName[normName]=null; else thcByName[normName]=entry; }
                         }
                     }
                 }
@@ -672,7 +674,7 @@ namespace CiscoLDTLApp
                     if (!string.IsNullOrEmpty(ws.SheetBangCong) && sheetMap.ContainsKey(ws.SheetBangCong))
                     {
                         var empDoc = LoadSheetXml(zip, sheetMap[ws.SheetBangCong]);
-                        LoadWorkshopEmployees(empDoc, ss, ws, thcBySdb, thcByName);
+                        LoadWorkshopEmployees(empDoc, ss, ws, thcBySdb, thcByName,masterEntries,masterIdentities);
                     }
                     ws.SyncBaselineFromCurrentTotals();
                 }
@@ -685,8 +687,10 @@ namespace CiscoLDTLApp
                 LoadManagementProductionSettings(zip, workshops);
                 LoadCranePayroll(zip, workshops);
                 LoadEditedGnv(zip, workshops);
+                foreach(var ws in workshops) { EmployeeClassification.Apply(ws); foreach(var e in ws.ListNhanVien) e.AttendanceBaseline=new AttendanceStamp(e); }
                 LoadCdnlPayroll(zip, workshops);
             }
+            foreach(var ws in workshops) { EmployeeClassification.Apply(ws); foreach(var e in ws.ListNhanVien) e.AttendanceBaseline=new AttendanceStamp(e); }
             return workshops;
         }
 
@@ -695,7 +699,9 @@ namespace CiscoLDTLApp
             List<string> ss,
             WorkshopData ws,
             Dictionary<string, TongHopCongEntry> thcBySdb,
-            Dictionary<string, TongHopCongEntry> thcByName)
+            Dictionary<string, TongHopCongEntry> thcByName,
+            Dictionary<int,TongHopCongEntry> masterEntries,
+            Dictionary<string,List<int>> masterIdentities)
         {
             if (doc == null) return;
             ws.ListNhanVien.Clear();
@@ -703,7 +709,7 @@ namespace CiscoLDTLApp
             bool isCDNL = (ws.MaPX == "CDNL");
             int maxRow = ws.TotalRowBangCong > 0 ? ws.TotalRowBangCong - 1 : 220;
             string currentBoPhan = "I. Quản lý phân xưởng";
-            bool isQuanLySection = true;
+
             int sttCounter = 1;
             bool needSalaryCalc = false;
 
@@ -725,14 +731,12 @@ namespace CiscoLDTLApp
                 // Nhận diện dòng tiêu đề Tổ / Bộ phận
                 bool teamHeading = cLower.StartsWith("tổ ") || cLower.StartsWith("tổ:")
                     || cLower.StartsWith("bộ phận") || cLower.StartsWith("quản lý");
-                if (colG <= 0 && (teamHeading ||
+                bool missingIdentity=string.IsNullOrWhiteSpace(colD) || colD.Trim()=="0";
+                if ((teamHeading && missingIdentity) || colG <= 0 && (teamHeading ||
                     (string.IsNullOrEmpty(colD) && string.IsNullOrEmpty(colE))))
                 {
                     currentBoPhan = colC;
-                    if (cLower.Contains("quản lý"))
-                        isQuanLySection = true;
-                    else if (teamHeading || cLower.Contains("trực tiếp"))
-                        isQuanLySection = false;
+
                     continue;
                 }
 
@@ -747,7 +751,8 @@ namespace CiscoLDTLApp
                     HoTen = colC,
                     SDB = colD,
                     BoPhan = currentBoPhan,
-                    LaQuanLy = isQuanLySection,
+                    LaQuanLy = EmployeeClassification.IsManagementRole(colE),
+                    LoadedRole = colE,
                     ChucDanh = colE,
                     MucLuongBHXH = colG,
                     PhuCapChucVu = GetCellDouble(doc, ss, "H" + r, 0),
@@ -806,16 +811,21 @@ namespace CiscoLDTLApp
 
                 // Đối chiếu với sheet 'Tổng hợp công' qua SDB hoặc Họ tên
                 TongHopCongEntry thc = null;
-                string normSdb = NormalizeSDB(emp.SDB);
+                string normSdb = MasterAttendancePlan.Identity(emp.SDB,emp.HoTen);
                 if (!string.IsNullOrEmpty(normSdb) && thcBySdb.ContainsKey(normSdb))
                     thc = thcBySdb[normSdb];
-                else
+                else if(string.IsNullOrWhiteSpace(emp.SDB))
                 {
                     string normName = NormalizeKey(emp.HoTen);
                     if (!string.IsNullOrEmpty(normName) && thcByName.ContainsKey(normName))
                         thc = thcByName[normName];
                 }
 
+                if(thc==null && normSdb!="") {
+                    int hint=MasterAttendancePlan.ResolveHint(GetCellFormula(doc,"K"+r),r,normSdb,masterIdentities);
+                    if(hint<=0) hint=MasterAttendancePlan.ResolveHint(GetCellFormula(doc,"N"+r),r,normSdb,masterIdentities);
+                    if(hint>0 && masterEntries.TryGetValue(hint,out thc)) emp.MasterRowHint=hint;
+                }
                 if (thc != null)
                 {
                     emp.TongHopCongRow = thc.Row;
@@ -844,6 +854,7 @@ namespace CiscoLDTLApp
                     emp.TongTienLuong = emp.LuongSanPham + emp.LuongLePhepCD + emp.LuongLamLe + emp.LuongHocVHTT + emp.PhuCapTien;
                 }
 
+                EmployeeClassification.Apply(emp);
                 ws.ListNhanVien.Add(emp);
             }
 
@@ -944,7 +955,20 @@ namespace CiscoLDTLApp
         /// và các bảng nghiệm thu 'NT ...', 'TT BDĐH', '9 tháng ...') vào file Excel gốc.
         /// Giữ nguyên 100% các công thức Excel (<f>...</f>)!
         /// </summary>
-        public static void SaveWorkshopsToExcel(string excelPath, List<WorkshopData> workshops)
+        public static void SaveWorkshopsToExcel(string excelPath,List<WorkshopData> workshops)
+        {
+            if(!File.Exists(excelPath)) throw new FileNotFoundException("Không tìm thấy Excel gốc.",excelPath);
+            foreach(var ws in workshops) { EmployeeClassification.Apply(ws); CdnlPayroll.EnsureCurrent(ws); }
+            string temp=Path.Combine(Path.GetDirectoryName(Path.GetFullPath(excelPath)),".emga-save-"+Guid.NewGuid().ToString("N")+".tmp");
+            try {
+                File.Copy(excelPath,temp,false);
+                SaveWorkshopsCore(temp,workshops);
+                File.Replace(temp,excelPath,null);
+                foreach(var ws in workshops) foreach(var e in ws.ListNhanVien) { e.AttendanceBaseline=new AttendanceStamp(e); e.AttendanceEdited=false; e.LoadedRole=e.ChucDanh; }
+            } finally { if(File.Exists(temp)) File.Delete(temp); }
+        }
+
+        private static void SaveWorkshopsCore(string excelPath,List<WorkshopData> workshops)
         {
             foreach(var ws in workshops) CdnlPayroll.EnsureCurrent(ws);
             if (!File.Exists(excelPath))
@@ -965,6 +989,7 @@ namespace CiscoLDTLApp
                     thcDoc = LoadSheetXml(zip, thcPath);
                 }
 
+                var masterPlan=MasterAttendancePlan.Build(workshops,MasterAttendancePlan.Index(thcDoc,managementStrings));
                 foreach (var ws in workshops)
                 {
                     ws.RecalculateDerived();
@@ -974,7 +999,7 @@ namespace CiscoLDTLApp
                     {
                         string empPath = sheetMap[ws.SheetBangCong];
                         var empDoc = LoadSheetXml(zip, empPath);
-                        SaveWorkshopEmployeesToSheet(empDoc, thcDoc, ws);
+                        SaveWorkshopEmployeesToSheet(empDoc, ws);
                         SaveSheetXml(zip, empPath, empDoc);
                     }
 
@@ -1285,6 +1310,8 @@ namespace CiscoLDTLApp
                 SaveEditedGnv(zip, workshops);
                 SaveManagementPayrollReport(zip, workshops);
                 SaveCdnlPayroll(zip, workshops);
+                if(thcPath!=null) { thcDoc=LoadSheetXml(zip,thcPath); masterPlan.Write(thcDoc,LoadSharedStrings(zip)); SaveSheetXml(zip,thcPath,thcDoc); }
+                SaveRoleSummaries(zip,workshops);
                 EnsureFullCalcOnLoad(zip);
             }
         }
@@ -1733,19 +1760,19 @@ namespace CiscoLDTLApp
                             foreach (var original in ws.ListNhanVien)
                                 if (original.ExcelRow == employee.ExcelRow && original.SDB == employee.SDB && original.HoTen == employee.HoTen)
                                 {
-                                    // Bản v4 có thể kéo nhầm cả tổ SX vào QL khi tiêu đề tổ có chức danh/SDB=0.
-                                    // Khi snapshot cũ mâu thuẫn với phân nhóm đã đọc đúng từ sheet gốc,
-                                    // giữ nhóm của sheet thay vì khôi phục lại lỗi cũ.
-                                    if (employee.QuanLyTinhMoi || original.LaQuanLy == employee.LaQuanLy)
-                                    {
-                                        original.ToSanXuat = employee.ToSanXuat;
-                                        original.BoPhan = employee.BoPhan;
-                                        original.LaQuanLy = employee.LaQuanLy;
+                                    string sourceRole=original.ChucDanh;
+                                    original.ToSanXuat=employee.ToSanXuat; original.BoPhan=employee.BoPhan;
+                                    if(employee.CoBangCong) { original.CoBangCong=true; original.CongK3=employee.CongK3; }
+                                    if(employee.CoAnCa) { original.CoAnCa=true; original.AnCaNhaAn=employee.AnCaNhaAn; original.AnCaTienMat=employee.AnCaTienMat; original.AnCaDonVi=employee.AnCaDonVi; }
+                                    if(employee.CoBDDH) { original.CoBDDH=true; original.BDDH_M1=employee.BDDH_M1; original.BDDH_M2=employee.BDDH_M2; original.BDDH_M3=employee.BDDH_M3; original.TienBDDH=employee.TienBDDH; }
+                                    original.AnCaNguon=employee.AnCaNguon; original.AnCaThuCong=employee.AnCaThuCong; original.NguonDuLieu=employee.NguonDuLieu;
+                                    if(employee.QuanLyTinhMoi && EmployeeClassification.IsManagementRole(string.IsNullOrWhiteSpace(sourceRole)?employee.ChucDanh:sourceRole)) {
+                                        ManagementPayroll.Copy(employee,original);
+                                        if(!string.IsNullOrWhiteSpace(sourceRole)) original.ChucDanh=sourceRole;
                                     }
-                                    if (employee.QuanLyTinhMoi)
-                                        ManagementPayroll.Copy(employee, original);
+                                    EmployeeClassification.Apply(original);
                                 }
-                        if (employee.QuanLyTinhMoi)
+                        if (employee.QuanLyTinhMoi && EmployeeClassification.IsManagementRole(employee.ChucDanh))
                         {
                             int fundCol = 2;
                             foreach (var property in typeof(EmployeeRecord).GetProperties())
@@ -1764,7 +1791,7 @@ namespace CiscoLDTLApp
             }
         }
 
-        private static void SaveWorkshopEmployeesToSheet(XmlDocument empDoc, XmlDocument thcDoc, WorkshopData ws)
+        private static void SaveWorkshopEmployeesToSheet(XmlDocument empDoc, WorkshopData ws)
         {
             if (empDoc == null || ws.ListNhanVien == null || ws.ListNhanVien.Count == 0) return;
 
@@ -1785,6 +1812,7 @@ namespace CiscoLDTLApp
                     SetCellNumeric(empDoc, "H" + r, emp.PhuCapChucVu, true);
                 if (emp.QuanLyTinhMoi) SetCellNumeric(empDoc, "I" + r, emp.HeSoCoDinh, true);
 
+                if(emp.LoadedRole!=null && emp.LoadedRole!=emp.ChucDanh) SetCellInlineString(empDoc,"E"+r,emp.ChucDanh,false);
                 SetCellNumeric(empDoc, "J" + r, emp.TongCong, true);
                 SetCellNumeric(empDoc, "K" + r, emp.CongSP, true);
                 SetCellNumeric(empDoc, "M" + r, emp.CongLePhep, true);
@@ -1845,26 +1873,6 @@ namespace CiscoLDTLApp
                     }
                 }
 
-                // Đồng thời cập nhật dòng tương ứng trong sheet 'Tổng hợp công' (nếu có) để các công thức INDEX/MATCH/SUMIF tự động khớp 100%!
-                if (thcDoc != null && emp.TongHopCongRow > 0)
-                {
-                    int tr = emp.TongHopCongRow;
-                    if (emp.MucLuongBHXH > 0)
-                        SetCellNumeric(thcDoc, "K" + tr, emp.MucLuongBHXH, true);
-                    SetCellNumeric(thcDoc, "L" + tr, emp.CongSP, true);
-                    SetCellNumeric(thcDoc, "M" + tr, emp.CongHocHop, true);
-                    SetCellNumeric(thcDoc, "N" + tr, emp.CongVHTT, true);
-                    SetCellNumeric(thcDoc, "O" + tr, emp.CongLePhep, true);
-                    SetCellNumeric(thcDoc, "R" + tr, emp.CongHocHop + emp.CongVHTT + emp.CongLePhep, true);
-                    SetCellNumeric(thcDoc, "T" + tr, emp.CongBHXH, true);
-                    if (emp.DiemSanXuat > 0 || emp.QuanLyTinhMoi)
-                        SetCellNumeric(thcDoc, "U" + tr, emp.DiemSanXuat, true);
-                    if (emp.LuongSanPham > 0)
-                        SetCellNumeric(thcDoc, "W" + tr, emp.LuongSanPham, true);
-                    if (emp.LuongLePhepCD > 0)
-                        SetCellNumeric(thcDoc, "AB" + tr, emp.LuongLePhepCD, true);
-                    SetCellNumeric(thcDoc, "AF" + tr, emp.CongAnCa, true);
-                }
 
                 sumJ += emp.TongCong;
                 sumK += emp.CongSP;
@@ -1918,6 +1926,25 @@ namespace CiscoLDTLApp
                     SetCellNumeric(empDoc, "AD" + totRow, sumAB, true);
                     SetCellNumeric(empDoc, "AE" + totRow, sumAD, true);
                 }
+            }
+        }
+
+        private static void SaveRoleSummaries(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip);
+            foreach(var ws in workshops) {
+                string count=null,work=null;
+                if(ws.MaPX=="TK") { count="D34";work="D27"; }
+                else if(ws.MaPX=="LG") { count="D17";work="D11"; }
+                else if(ws.MaPX=="LT") { count="D16";work="D10"; }
+                else if(ws.MaPX=="CDNL") { count="D20";work="D12"; }
+                string path; if(count==null || !map.TryGetValue(ws.SheetNT,out path) || ws.ListNhanVien.Count==0) continue;
+                var doc=LoadSheetXml(zip,path); var cells=new List<string>(); bool added=false;
+                foreach(var e in ws.ListNhanVien) if(e.LaQuanLy) { if(e.ExcelRow<=0) added=true; else cells.Add("'"+ws.SheetBangCong.Replace("'","''")+"'!K"+e.ExcelRow); }
+                SetCellNumeric(doc,count,ws.LDQuanLy,false);
+                if(added || cells.Count==0) SetCellNumeric(doc,work,ws.CongQL,false);
+                else SetCraneFormula(doc,work,"SUM("+string.Join(",",cells.ToArray())+")",ws.CongQL);
+                SaveSheetXml(zip,path,doc);
             }
         }
 

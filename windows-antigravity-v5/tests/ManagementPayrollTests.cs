@@ -13,8 +13,8 @@ class ManagementPayrollTests
     {
         var w = new WorkshopData { MaPX="TK", LuongSPQL=3000000, DieuChinhLuongQL=-50000 };
         w.ListNhanVien.Clear();
-        var a = new EmployeeRecord { LaQuanLy=true, HeSoCoDinh=2, CongSP=26, XepLoai="A", CongLePhep=1, MucLuongBHXH=5200000, CongHocHop=1, CongVHTT=1, PhuCapTien=100000, LuongLamLe=150000, QuanLyTinhMoi=true };
-        var b = new EmployeeRecord { LaQuanLy=true, HeSoCoDinh=2, CongSP=13, XepLoai="B", QuanLyTinhMoi=true };
+        var a = new EmployeeRecord { ChucDanh="QĐ", LaQuanLy=true, HeSoCoDinh=2, CongSP=26, XepLoai="A", CongLePhep=1, MucLuongBHXH=5200000, CongHocHop=1, CongVHTT=1, PhuCapTien=100000, LuongLamLe=150000, QuanLyTinhMoi=true };
+        var b = new EmployeeRecord { ChucDanh="QĐ", LaQuanLy=true, HeSoCoDinh=2, CongSP=13, XepLoai="B", QuanLyTinhMoi=true };
         var worker = new EmployeeRecord { LaQuanLy=false, CongSP=26, LuongSanPham=123456, TongTienLuong=123456 };
         w.ListNhanVien.Add(a); w.ListNhanVien.Add(b); w.ListNhanVien.Add(worker);
         ManagementPayroll.Recalculate(w);
@@ -61,10 +61,11 @@ class ManagementPayrollTests
             foreach(var e in ws.ListNhanVien) if(e.LaQuanLy) { manager=e; break; }
             if(manager==null) continue;
             foreach(var e in ws.ListNhanVien) if(e.LaQuanLy)
-            { e.HeSoCoDinh=2; e.CongSP=26; e.XepLoai="A"; e.QuanLyTinhMoi=true; }
-            manager.HeSoCoDinh=3; manager.CongSP=13; manager.XepLoai="B";
+            { e.HeSoCoDinh=2; e.XepLoai="A"; e.QuanLyTinhMoi=true; }
+            manager.HeSoCoDinh=3; manager.XepLoai="B";
+            // Keep source attendance consistent across duplicate department rosters; varied days are covered by synthetic tests.
             manager.LuongLamLe=123400; manager.PhuCapTien=0;
-            ws.LuongSPQL=20000000+tested*1000; ws.DieuChinhLuongQL=-12300;
+            ws.LuongSPQL=ws.CongQL>0?20000000+tested*1000:0; ws.DieuChinhLuongQL=ws.CongQL>0?-12300:0;
             ManagementPayroll.Recalculate(ws); tested++;
         }
         Check(tested==5,"All five workshops exercised");

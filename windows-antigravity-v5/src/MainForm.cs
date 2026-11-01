@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.6";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.7";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.6)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.7)");
             crane.Click += (sender, args) => {
                 if (_workshops == null || _currentIndex < 0) return;
                 CommitAllGridEdits();
@@ -258,7 +258,7 @@ namespace CiscoLDTLApp
                 using (var form = new CranePayrollForm(ws))
                     if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
             };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.6)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.7)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -274,7 +274,7 @@ namespace CiscoLDTLApp
             };
             payrollMenu.Items.Add(management);
             payrollMenu.Items.Add(crane);
-            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.6)");
+            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.7)");
             cdnl.Click+=(sender,args)=> {
                 if(_workshops==null || _currentIndex<0) return;
                 CommitAllGridEdits(); SaveUIToCurrentWorkshop(); var ws=_workshops[_currentIndex];
@@ -457,6 +457,9 @@ namespace CiscoLDTLApp
             var colNguon = new DataGridViewComboBoxColumn { Name = "AnCaNguon", HeaderText = "Chọn nguồn ăn ca", FlatStyle = FlatStyle.Flat };
             colNguon.Items.AddRange(new object[] { "Công thức", "Đơn vị", "Thủ công", "Số cũ (Excel)" });
             dgvEmployees.Columns.Add(colNguon);
+            dgvEmployees.Columns.Add("LoaiLaoDong","Phân loại LĐ");
+            dgvEmployees.Columns["LoaiLaoDong"].ReadOnly=true;
+            dgvEmployees.Columns["LoaiLaoDong"].Width=115;
             dgvEmployees.DataError += (s, ev) => { ev.ThrowException = false; };
 
             int[] widths = { 42, 55, 58, 165, 135, 55, 85, 65, 65, 62, 60, 52, 62, 58, 85, 45, 85, 110, 98, 90, 115 };
@@ -471,6 +474,8 @@ namespace CiscoLDTLApp
 
             dgvEmployees.Columns[0].ReadOnly = true;
             dgvEmployees.Columns[1].ReadOnly = true;
+            dgvEmployees.Columns[2].ReadOnly = true;
+            dgvEmployees.Columns[3].ReadOnly = true;
             dgvEmployees.Columns[1].DefaultCellStyle.ForeColor = Color.Gray;
             dgvEmployees.Columns[3].DefaultCellStyle.Font = new Font("Segoe UI", 9f, FontStyle.Bold);
             dgvEmployees.Columns[7].DefaultCellStyle.BackColor = Color.FromArgb(240, 244, 250);
@@ -526,6 +531,7 @@ namespace CiscoLDTLApp
             if (emp == null) return;
 
             ReadRowIntoEmployeeRecord(row, emp);
+            if(e.ColumnIndex>=8 && e.ColumnIndex<=13) emp.AttendanceEdited=true;
             var ws = _workshops[_currentIndex];
             ws.RecalculateFromEmployees(true);
 
@@ -1233,6 +1239,8 @@ namespace CiscoLDTLApp
 
         private void WriteEmployeeRecordToRow(DataGridViewRow row, EmployeeRecord emp)
         {
+            EmployeeClassification.Apply(emp);
+            row.Cells["LoaiLaoDong"].Value=emp.LaQuanLy?"Quản lý":"Trực tiếp";
             row.Cells[0].Value = emp.STT;
             row.Cells[1].Value = emp.ExcelRow;
             row.Cells[2].Value = emp.SDB;
@@ -1296,6 +1304,7 @@ namespace CiscoLDTLApp
             emp.HeSoHuong = ParseVN(row.Cells[16].Value);
             emp.LuongSanPham = ParseVN(row.Cells[17].Value);
             emp.LuongLePhepCD = ParseVN(row.Cells[18].Value);
+            EmployeeClassification.Apply(emp);
         }
 
         private void SaveEmployeeGridToWorkshop()
@@ -1762,12 +1771,13 @@ namespace CiscoLDTLApp
             public double HeSo { get; set; }
             [System.ComponentModel.DisplayName("Phụ cấp chức vụ")]
             public double PhuCap { get; set; }
-            [System.ComponentModel.DisplayName("Là lao động quản lý")]
-            public bool QuanLy { get; set; }
+            [System.ComponentModel.DisplayName("Là quản lý (tự theo chức danh)")]
+            [System.ComponentModel.ReadOnly(true)]
+            public bool QuanLy { get { return EmployeeClassification.IsManagementRole(ChucDanh); } }
             public EmployeeProfile(EmployeeRecord e)
-            { To = e.ToSanXuat; ChucDanh = e.ChucDanh; Luong = e.MucLuongBHXH; HeSo = e.HeSoCoDinh; PhuCap = e.PhuCapChucVu; QuanLy = e.LaQuanLy; }
+            { To = e.ToSanXuat; ChucDanh = e.ChucDanh; Luong = e.MucLuongBHXH; HeSo = e.HeSoCoDinh; PhuCap = e.PhuCapChucVu; }
             public void Apply(EmployeeRecord e)
-            { e.ToSanXuat = e.BoPhan = To.Trim(); e.ChucDanh = ChucDanh; e.MucLuongBHXH = Luong; e.HeSoCoDinh = HeSo; e.PhuCapChucVu = PhuCap; e.LaQuanLy = QuanLy; }
+            { e.ToSanXuat = e.BoPhan = To.Trim(); e.ChucDanh = ChucDanh; e.MucLuongBHXH = Luong; e.HeSoCoDinh = HeSo; e.PhuCapChucVu = PhuCap; EmployeeClassification.Apply(e); }
         }
 
         private void BtnImportExternal_Click(object sender, EventArgs e)

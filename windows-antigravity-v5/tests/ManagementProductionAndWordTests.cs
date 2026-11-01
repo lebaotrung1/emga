@@ -11,7 +11,7 @@ class ManagementProductionAndWordTests
     {
         var w=new WorkshopData { MaPX="LT", TinhQuyQLTuSanLuong=true, SanLuongLoai1=10.123,
             SanLuongLoai2=3.25, SanLuongLe=1, DonGiaQLLoai1=100000, DonGiaQLLoai2=50000 };
-        w.ListNhanVien.Add(new EmployeeRecord { LaQuanLy=true, CongSP=26, HeSoCoDinh=2, XepLoai="A" });
+        w.ListNhanVien.Add(new EmployeeRecord { ChucDanh="QĐ", LaQuanLy=true, CongSP=26, HeSoCoDinh=2, XepLoai="A" });
         ManagementPayroll.Recalculate(w);
         Check(w.DonGiaQLLe==200000 && w.LuongSPQL==1374800,"Fund sums three quantity × management price lines; holiday price doubles L1");
         Check(w.ListNhanVien[0].LuongSanPham==1374800,"Fund reaches individual salary");

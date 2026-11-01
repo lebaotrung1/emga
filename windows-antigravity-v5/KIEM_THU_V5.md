@@ -1,3 +1,11 @@
+# v5.7 — quản lý theo chức danh, lưu công theo danh tính
+
+- `ClassificationAndSaveTests`: 51 kiểm tra dữ liệu giả; 616 kiểm tra khi chạy thêm trên bản sao Excel cục bộ. Phủ chức danh viết tắt/đầy đủ, cờ quản lý cũ sai, nhóm có cả quản lý/trực tiếp, không ghi đè công giữa PX, lưu công K3/ăn ca/BDĐH, giữ P/Q, xung đột và tính nguyên vẹn của tệp, xóa công về 0, SDB trùng nhưng khác tên, ba vòng lưu–mở và công thức tra cứu/nghiệm thu. Excel nguồn không đưa vào repo. Những ô mã nguồn lỗi sẵn được cô lập trong bộ tính thử khi kiểm tra tra cứu công; dữ liệu trên đĩa không bị sửa để che lỗi.
+- Kiểm thử quản lý Excel giữ công nguồn giữa các PX trùng người; tình huống ngày công khác nhau được kiểm tra với dữ liệu giả. Kiểm thử giữ công thức CĐNL loại trừ đúng hai ô tổng hợp số người/số công quản lý D20/D12 được sửa có chủ đích theo chức danh; toàn bộ công thức bộ phận khác vẫn được so sánh.
+- Bộ kiểm thử giao diện kiểm tra trưởng ca có cờ quản lý cũ vẫn bị loại và không nhận phân bổ quỹ quản lý. Biên dịch với tham chiếu Microsoft .NET Framework 4.5, chạy Linux/Mono, chưa thử trực tiếp Windows.
+
+---
+
 # Bản hiện hành: v5.4
 
 Hướng dẫn sử dụng/công thức hiện hành nằm trong **README.md**. Các mục v5/v5.1/v5.2 dưới đây là lịch sử; cách nhập tổng quỹ quản lý bằng tay được thay bằng sản lượng × đơn giá quản lý ở v5.3.

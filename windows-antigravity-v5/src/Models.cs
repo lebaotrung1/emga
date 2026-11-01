@@ -58,6 +58,10 @@ namespace CiscoLDTLApp
     /// </summary>
     public class EmployeeRecord
     {
+        internal AttendanceStamp AttendanceBaseline;
+        internal bool AttendanceEdited;
+        internal string LoadedRole;
+        internal int MasterRowHint;
         public int STT { get; set; }
         public int ExcelRow { get; set; }           // Dòng trong sheet phân xưởng ('T kết', 'Gang', 'thép', 'CĐNL', 'K. tuyển')
         public int TongHopCongRow { get; set; }     // Dòng trong sheet 'Tổng hợp công'
@@ -391,6 +395,7 @@ namespace CiscoLDTLApp
         /// </summary>
         public void RecalculateFromEmployees(bool redistributeProductSalary = true)
         {
+            EmployeeClassification.Apply(this);
             RecalculateGnv();
             if (MaPX == "CDNL") {
                 CdnlPayroll.AttendanceOnly(this);
@@ -618,10 +623,12 @@ namespace CiscoLDTLApp
             {
                 string to = !string.IsNullOrEmpty(e.ToSanXuat) ? e.ToSanXuat : (e.BoPhan ?? "");
                 ToSummary s;
-                if (!map.TryGetValue(to, out s))
+                EmployeeClassification.Apply(e);
+                string groupKey=(e.LaQuanLy?"QL|":"TT|")+to;
+                if (!map.TryGetValue(groupKey, out s))
                 {
                     s = new ToSummary { TenTo = to, LaQuanLy = e.LaQuanLy };
-                    map[to] = s;
+                    map[groupKey] = s;
                     list.Add(s);
                 }
                 s.SoLD++;
@@ -770,6 +777,7 @@ namespace CiscoLDTLApp
 
         public void RecalculateDerived()
         {
+            EmployeeClassification.Apply(this);
             ManagementProductionPayroll.UpdateFund(this);
             LDCuoiKy = LDDauKy + LDTang - LDGiam;
             CongLDTT = CongSP - CongQL;
