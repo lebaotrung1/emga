@@ -1,0 +1,11 @@
+*.ntproject
+!Mau_GIA_LAP.ntproject
+*.ntproject.bak
+*.tmp-*
+*.xlsx
+*.docx
+StudioTests.exe
+StudioUiTests.exe
+MakeDemo.exe
+inputs.png
+results.png
