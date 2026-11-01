@@ -27,4 +27,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Crane payroll test build failed' }
     & .\CranePayrollTests.exe
     if ($LASTEXITCODE -ne 0) { throw 'Crane payroll tests failed' }
+    & $csc /nologo /target:exe /out:CdnlPayrollTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /reference:System.Windows.Forms.dll tests/CdnlPayrollTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'CDNL test build failed' }
+    & .\CdnlPayrollTests.exe
+    if ($LASTEXITCODE -ne 0) { throw 'CDNL payroll tests failed' }
 } finally { Pop-Location }

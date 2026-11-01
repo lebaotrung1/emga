@@ -1,3 +1,44 @@
+# Antigravity v5.6 — tính lương CĐNL từng bộ phận
+
+Tải **antigravity_v5_6_program_only.zip** trên nhánh `antigravity-payroll-v5`. Đóng bản cũ, sao lưu Excel, giải nén rồi thay EXE/launcher; giữ nguyên Data và Templates. Tiêu đề v5.6, phiên bản EXE 5.6.0.0. Không chứa dữ liệu người dùng.
+
+## Vào đâu để tính CĐNL?
+
+1. Chọn **Phân xưởng Cơ điện Năng lượng**, nạp Excel như trước.
+2. Trên menu trên cùng, bấm **TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.6)**.
+3. Tab **Quỹ từng bộ phận** hiển thị Trưởng ca, Vận hành năng lượng, Vận tải/cẩu/xúc lật, Sàng quặng, Sửa chữa cơ điện và Quản lý. Chọn một nhóm để xem các dòng thành phần, số tiền và công thức đang dùng.
+4. Tab **Đầu vào / ô cần đối chiếu** hiển thị các đầu vào thực sự được công thức sử dụng. Nhập giá trị thay thế, lý do và đánh dấu áp dụng. Có thể thêm ô theo địa chỉ `Sheet!A1`. Bỏ chọn để trở về giá trị/công thức gốc. Công và mức BHXH lấy từ bảng công/hồ sơ đang nạp; sửa tại đó. Điểm hưởng theo AB nguồn hoặc giá trị đối chiếu nhập tại tab này, không tự đổi tất cả theo xếp loại.
+5. Tab **Phân bổ từng người** xem lương SP và tổng lương. Mặc định đọc đúng công thức AD/AB của từng dòng và các ô đơn giá nhóm AJ146/AJ152/AJ158/AJ168. Một số dòng vận tải dùng Z là đại lượng số, không phải A/B/C; không áp xếp loại chung. Khi cần quy tắc riêng, chọn bộ phận, nhập điểm và lý do; ô đơn giá tự gợi ý AJ146/AJ152/AJ158/AJ168 theo nhóm khi có nguồn. Có thể dùng ô đơn giá nhóm này hoặc nhập đơn giá điểm riêng bằng số. Đây là lựa chọn chủ động, không tự đoán nhóm theo tên tổ. Chênh lệch quỹ/tiền đã phân bổ luôn được hiển thị để đối chiếu, không dồn vào người cuối.
+6. Bấm **Tính / xem trước**, kiểm tra tab **Lỗi cần xử lý**, rồi **Áp dụng vào nghiệm thu**. Hủy không ghi thay đổi. Sau khi áp dụng, bấm **Lưu Excel** ở màn hình chính. Các số tiền tổng hợp tháng CĐNL đã tính là ô chỉ đọc; sửa đầu vào trong màn hình CĐNL để tính lại.
+
+Bỏ chọn **Tính lại lương từng người** nếu chỉ muốn tính quỹ. Khi đó chưa tính lại phân bổ trực tiếp và ghi rõ trạng thái này; quản lý đã bật chế độ riêng vẫn theo chế độ đó; không cho đính kèm bảng lương cá nhân vào Word như kết quả mới. Hồ sơ mới chưa có công thức nguồn phải khai báo quy tắc phân bổ riêng; nếu có công chế độ/lễ/học nhưng chưa có dòng công thức tương ứng, phần mềm yêu cầu nạp công thức đầy đủ, không tự đoán mức tiền.
+
+## Các cách tính được giữ riêng
+
+Quỹ từng bộ phận được tính từ chính công thức `NT CĐNL`: tỷ lệ quỹ các PX, công/tấn/chuyến chia định mức, hệ số lễ/80%, khoản trừ/thu hồi và tổng các GNV theo đúng vùng tham chiếu. Chế độ, phụ cấp và tiền lễ của từng người cũng theo công thức dòng nguồn. Không lấy tổng quỹ CĐNL chia cho mọi nhân viên bằng cùng một công thức. Bộ phân bổ chung cũ được bỏ qua riêng cho CĐNL, kể cả khi chưa áp dụng công cụ mới.
+
+Sửa quỹ/sản lượng Thép, Gang, Thiêu kết sẽ cập nhật cơ sở liên kết khi tính lại CĐNL, xem trước/xuất Word hoặc lưu Excel. GNV đã chỉnh qua danh sách hiện có chỉ đi vào quỹ sửa chữa qua I371 một lần. Chế độ quản lý tính từ sản lượng và đơn giá QL riêng vẫn dùng màn hình quản lý hiện có; khi bật chế độ đó, phần CĐNL dùng kết quả quản lý này, không kéo lại công thức quản lý cũ.
+
+Word xem trước, xuất mới và cập nhật mẫu đều ghi quỹ từng nhóm theo **triệu đồng với đúng một số lẻ**. Chi tiết quỹ nhóm ghi rõ là tháng; tổng quý/lũy kế theo nền hiện có. Nạp công và tính cẩu phôi v5.5 được giữ.
+
+## Ô nguồn lỗi trong Excel đã gửi
+
+Tệp hiện có các điểm làm phân bổ đầy đủ chưa tính được: `THop (có tạm ứng)!I51`, `CĐNL!AH5` chứa tham chiếu mất; `CĐNL!AB98:AB101` có `#N/A`. Ngoài ra có các dòng có công nhưng AD trống và lỗi tra cứu mã ở nguồn liên kết. Không biến AD trống thành lương 0 hoặc tự lấy tiền fallback cũ làm lương mới khi lưu quỹ. Màn hình chỉ rõ từng ô/hồ sơ; có thể khai báo quy tắc riêng ở tab Phân bổ hoặc đối chiếu giá trị/công thức nguồn. Cần đối chiếu tài liệu nghiệp vụ để nhập giá trị thay thế cùng lý do hoặc nạp nguồn đã sửa. **Không tự điền 0, không lấy số cũ làm kết quả tính mới.** Chỉ tính quỹ vẫn thực hiện được. Đây là lỗi/thiếu dữ liệu nguồn, không phải một công thức chung có thể áp thay cho các ô đó.
+
+Bộ tính hỗ trợ các hàm số đang dùng trong đường tính được kiểm tra (SUM/ROUND/IF/IFERROR/COUNT/COUNTA/LEN/MIN/MAX/ABS/SUMIF/COUNTIF/INDEX và MATCH chính xác), tham chiếu liên sheet và công thức dùng chung. Không chạy macro hoặc truy cập liên kết ngoài. Công thức ngoài phạm vi hỗ trợ, lỗi nguồn, chia 0 và tham chiếu vòng được báo rõ, không dùng cache để giả lập thành công. Đây không phải bộ máy Excel đầy đủ.
+
+## Lưu và khôi phục
+
+Các sheet **CDNL dau vao**, **CDNL phan bo**, **CDNL ket qua** lưu đầu vào được đối chiếu/lý do, quy tắc riêng, trạng thái áp dụng và quỹ nhóm. Giữ các sheet này khi sao chép dữ liệu. Khi thay một ô bằng giá trị đã duyệt, công thức/giá trị gốc được lưu lại; ô Excel tham chiếu tới đầu vào đã đối chiếu để không chạy lại tham chiếu lỗi khi mở Excel. Bỏ chọn thay thế rồi lưu sẽ khôi phục nguồn gốc. Quy tắc phân bổ riêng và chế độ quản lý mới cũng giữ lại công thức gốc trước khi thay. Dữ liệu này nằm trong Excel cục bộ, không nằm trong chương trình hay GitHub.
+
+Không chỉnh trực tiếp các sheet cấu hình nếu chưa hiểu chế độ đang áp dụng; dùng màn hình tương ứng để tính lại/lưu. Excel có thể tính lại các phần ngoài phạm vi bộ tính ứng dụng; cần đối chiếu một kỳ đã duyệt trước khi thanh toán.
+
+`Build.ps1` biên dịch Windows; `Kiem_Thu_Logic_V5.ps1` chạy dữ liệu giả. Kiểm thử model, giao diện, Word, đầu vào đối chiếu và lưu–mở Excel thực hiện trên Linux/Mono; chưa chạy trực tiếp Windows. Các kiểm thử cần Excel riêng dùng bản sao ngoài checkout, không đóng gói dữ liệu nguồn hoặc kết quả có nhân sự. Không sửa Nghiệm Thu Studio.
+
+---
+
+## Hướng dẫn các bản trước
+
 # Antigravity v5.5 — lương cẩu phôi PX Thép
 
 Tải `antigravity_v5_5_program_only.zip` trên nhánh `antigravity-payroll-v5`. Đóng chương trình, sao lưu Excel, giải nén và thay EXE/launcher; giữ nguyên Data và Templates. Tiêu đề là v5.5, phiên bản EXE 5.5.0.0. Gói chỉ chứa chương trình, mã nguồn, hướng dẫn và kiểm thử; không có dữ liệu người dùng.

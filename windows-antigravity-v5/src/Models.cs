@@ -293,6 +293,7 @@ namespace CiscoLDTLApp
         public double SanLuongPhuKL { get; set; }
         public double SanLuongPhuDonGia { get; set; }
         public double SanLuongPhuTT { get; set; }
+        public CdnlPayroll Cdnl { get; set; }
         public bool CauPhoiDaApDung { get; set; }
         public double CauPhoiKhoanKhac { get; set; }
         public CraneStage[] CauPhoi { get; private set; }
@@ -391,6 +392,13 @@ namespace CiscoLDTLApp
         public void RecalculateFromEmployees(bool redistributeProductSalary = true)
         {
             RecalculateGnv();
+            if (MaPX == "CDNL") {
+                CdnlPayroll.AttendanceOnly(this);
+                ApplyFileBasedTotals();
+                if(Cdnl!=null) Cdnl.Recalculate(this);
+                RecalculateDerived();
+                return;
+            }
             if (ListNhanVien == null || ListNhanVien.Count == 0)
             {
                 RecalculateDerived();
@@ -803,6 +811,8 @@ namespace CiscoLDTLApp
             {
                 BQNgayCongLVTT = Math.Round((LuongSPTT + LuongCVKhac + TruLuong) / CongLDTT, 0);
             }
+
+            if(MaPX=="CDNL" && Cdnl!=null) Cdnl.UpdateSummary(this);
 
             // TỰ ĐỘNG CỘNG DỒN LŨY KẾ QUÝ & NĂM (6 THÁNG / 9 THÁNG / CẢ NĂM)
             if (TuDongCongLuyKe && TruocTrongQuy != null && TruocTrongNam != null)

@@ -58,6 +58,7 @@ namespace CiscoLDTLApp
 
         public static string GeneratePreviewText(WorkshopData ws)
         {
+            CdnlPayroll.EnsureReport(ws);
             ws.RecalculateDerived();
             var sb = new StringBuilder();
             sb.AppendLine("Đơn vị các khoản tiền: triệu đồng (1 chữ số thập phân); đơn giá ghi riêng bằng đồng/đơn vị.");
@@ -125,6 +126,7 @@ namespace CiscoLDTLApp
             sb.AppendLine("2. Tiền lương, ăn ca thực hiện:");
             sb.AppendLine("2.1. Tiền lương:");
             foreach(var line in CranePayroll.ReportLines(ws)) sb.AppendLine(line);
+            foreach(var line in CdnlPayroll.ReportLines(ws)) sb.AppendLine(line);
             if (ws.MaPX != "CDNL" && ws.SanLuongTH > 0)
             {
                 sb.AppendLine(string.Format("- Sản lượng thực hiện ({0}): Kế hoạch tháng: {1} {2}; Thực hiện tháng {3}: {4} {5} (Sản lượng tính lương: {6} {7}, trong đó Loại 1: {8} {9}, Loại 2: {10} {11}, làm ngày Lễ: {12} {13}).", ws.TenSanPhamChinh, FmtDec(ws.SanLuongKH, 2), ws.DvtSanPham, ws.Thang, FmtDec(ws.SanLuongTH, 3), ws.DvtSanPham, FmtDec(ws.SanLuongTinhLuong, 3), ws.DvtSanPham, FmtDec(ws.SanLuongLoai1, 3), ws.DvtSanPham, FmtDec(ws.SanLuongLoai2, 3), ws.DvtSanPham, FmtDec(ws.SanLuongLe, 3), ws.DvtSanPham));
@@ -268,6 +270,7 @@ namespace CiscoLDTLApp
 
         public static void ExportWordDocx(WorkshopData ws, string outputPath)
         {
+            CdnlPayroll.EnsureReport(ws);
             ws.RecalculateDerived();
             string dir = Path.GetDirectoryName(outputPath);
             if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
@@ -295,6 +298,7 @@ namespace CiscoLDTLApp
         /// </summary>
         public static void UpdateExistingMasterDocx(WorkshopData ws, string sourceDocxPath, string targetDocxPath)
         {
+            CdnlPayroll.EnsureReport(ws);
             ws.RecalculateDerived();
             string targetDir = Path.GetDirectoryName(targetDocxPath);
             if (!string.IsNullOrEmpty(targetDir) && !Directory.Exists(targetDir))
@@ -464,6 +468,7 @@ namespace CiscoLDTLApp
             body.Append(P("2.1. Tiền lương", true, true, "both", 20, 20, 26, 420));
 
             foreach(var line in CranePayroll.ReportLines(ws)) body.Append(P(line, false, false, "both", 20, 20, 26, 420));
+            foreach(var line in CdnlPayroll.ReportLines(ws)) body.Append(P(line, false, false, "both", 20, 20, 26, 420));
             if (ws.MaPX != "CDNL" && ws.SanLuongTH > 0)
             {
                 if (!isMultiPeriod)

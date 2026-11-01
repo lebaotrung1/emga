@@ -53,7 +53,7 @@ class ManagementPayrollUiTests
             main.Show(); Application.DoEvents();
             MenuStrip menu=null;
             foreach(Control c in main.Controls) if(c is MenuStrip) menu=(MenuStrip)c;
-            Check(menu!=null && menu.Visible && menu.Items.Count==2,"Management entry visible in main form");
+            Check(menu!=null && menu.Visible && menu.Items.Count==3,"Management entry visible in main form");
             Check(menu.Bounds.Width>500 && menu.Bounds.Height>10,"Management menu has usable size");
             var timer=new Timer { Interval=200 };
             bool found=false;

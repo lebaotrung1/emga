@@ -228,7 +228,7 @@ namespace CiscoLDTLApp
                 vNode = sheetDoc.CreateElement("v", NsMain);
                 cNode.AppendChild(vNode);
             }
-            vNode.InnerText = value.ToString(CultureInfo.InvariantCulture);
+            vNode.InnerText = value.ToString("R", CultureInfo.InvariantCulture);
         }
 
         public static void SetCellInlineString(XmlDocument sheetDoc, string cellRef, string text, bool skipIfHasFormula = true)
@@ -685,6 +685,7 @@ namespace CiscoLDTLApp
                 LoadManagementProductionSettings(zip, workshops);
                 LoadCranePayroll(zip, workshops);
                 LoadEditedGnv(zip, workshops);
+                LoadCdnlPayroll(zip, workshops);
             }
             return workshops;
         }
@@ -847,7 +848,7 @@ namespace CiscoLDTLApp
             }
 
             // Nếu trong sheet có những dòng chưa lưu giá trị bộ nhớ đệm của Lương SP thì tự động phân bổ theo đúng công thức Điểm/Hệ số
-            if (needSalaryCalc && ws.ListNhanVien.Count > 0)
+            if (needSalaryCalc && ws.MaPX != "CDNL" && ws.ListNhanVien.Count > 0)
             {
                 PopulateMissingEmployeeSalaries(ws);
             }
@@ -945,6 +946,7 @@ namespace CiscoLDTLApp
         /// </summary>
         public static void SaveWorkshopsToExcel(string excelPath, List<WorkshopData> workshops)
         {
+            foreach(var ws in workshops) CdnlPayroll.EnsureCurrent(ws);
             if (!File.Exists(excelPath))
                 throw new FileNotFoundException("Không tìm thấy file Excel gốc: " + excelPath);
 
@@ -1282,6 +1284,7 @@ namespace CiscoLDTLApp
                 SaveCranePayroll(zip, workshops);
                 SaveEditedGnv(zip, workshops);
                 SaveManagementPayrollReport(zip, workshops);
+                SaveCdnlPayroll(zip, workshops);
                 EnsureFullCalcOnLoad(zip);
             }
         }
@@ -1418,6 +1421,138 @@ namespace CiscoLDTLApp
             var cell=GetSheetIndex(doc).Cells[address];
             var node=doc.CreateElement("f",NsMain); node.InnerText=formula;
             cell.PrependChild(node);
+        }
+
+        private static void LoadCdnlPayroll(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip); if(!map.ContainsKey("NT CĐNL") || !map.ContainsKey("CĐNL")) return;
+            var data=new CdnlPayroll(PayrollFormulaBook.Load(zip),workshops); var strings=LoadSharedStrings(zip); string path;
+            if(map.TryGetValue("CDNL dau vao",out path)) {
+                var doc=LoadSheetXml(zip,path);
+                foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)) {
+                    int r=int.Parse(row.GetAttribute("r")); if(r<2) continue;
+                    string sheet=GetCellString(doc,strings,"A"+r),address=GetCellString(doc,strings,"B"+r);
+                    string key=PayrollFormulaBook.Key(sheet,address); if(!data.Book.Cells.ContainsKey(key)) continue;
+                    string type=GetCellString(doc,strings,"I"+r),text=GetCellString(doc,strings,"H"+r),formula=GetCellString(doc,strings,"G"+r);
+                    var original=new PayrollCell { Sheet=sheet,Address=address,Formula=formula==""?null:formula,Text=type=="blank"?null:text,IsNumber=type=="number",IsError=type=="error" };
+                    double.TryParse(text,NumberStyles.Float,CultureInfo.InvariantCulture,out original.Number);
+                    data.Book.Cells[key]=original;
+                    data.Overrides[key]=new CdnlOverride { Value=GetCellDouble(doc,strings,"C"+r,0),Reason=GetCellString(doc,strings,"D"+r),Active=GetCellString(doc,strings,"E"+r)=="True",Source=original };
+                }
+            }
+            if(map.TryGetValue("CDNL phan bo",out path)) {
+                var doc=LoadSheetXml(zip,path);
+                foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)) {
+                    int r=int.Parse(row.GetAttribute("r")); if(r<2) continue;
+                    string key=GetCellString(doc,strings,"A"+r); if(key=="") continue;
+                    data.Rules[key]=new CdnlEmployeeRule { Group=GetCellString(doc,strings,"B"+r),Weight=GetCellDouble(doc,strings,"C"+r,0),Rate=GetCellDouble(doc,strings,"D"+r,0),RateCell=GetCellString(doc,strings,"F"+r),Reason=GetCellString(doc,strings,"E"+r) };
+                }
+            }
+            bool applied=false;
+            if(map.TryGetValue("CDNL ket qua",out path)) {
+                var doc=LoadSheetXml(zip,path);
+                applied=GetCellString(doc,strings,"B1")=="True";
+                data.Distribute=GetCellString(doc,strings,"B2")=="True";
+            }
+            foreach(var ws in workshops) if(ws.MaPX=="CDNL") {
+                ws.Cdnl=data;
+                if(applied) { data.Applied=true; if(data.Recalculate(ws)) ws.RecalculateDerived(); }
+            }
+        }
+
+        private static XmlDocument NewSheetDocument()
+        { var doc=new XmlDocument(); doc.LoadXml("<worksheet xmlns='"+NsMain+"'><sheetData/></worksheet>"); return doc; }
+        private static XmlDocument LoadCdnlSheet(ZipArchive zip,string path,CdnlPayroll data)
+        {
+            var doc=LoadSheetXml(zip,path); string sheet=null;
+            foreach(var pair in GetSheetMap(zip)) if(pair.Value==path) { sheet=pair.Key; break; }
+            if(sheet==null) return doc;
+            // Changing a shared-formula anchor must not orphan the other rows in its family.
+            foreach(XmlElement cell in doc.GetElementsByTagName("c",NsMain)) {
+                var formula=FindChild(cell,"f") as XmlElement; if(formula==null || formula.GetAttribute("t")!="shared") continue;
+                PayrollCell original; if(!data.Book.Cells.TryGetValue(PayrollFormulaBook.Key(sheet,cell.GetAttribute("r")),out original) || string.IsNullOrEmpty(original.Formula) || original.Formula=="#SHARED!") continue;
+                formula.RemoveAll(); formula.InnerText=original.Formula;
+            }
+            return doc;
+        }
+
+        private static void SaveCdnlPayroll(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            foreach(var ws in workshops) {
+                var data=ws.Cdnl; if(ws.MaPX!="CDNL" || data==null || !data.Applied || data.Last==null) continue;
+                string inputPath=EnsureWorksheet(zip,"CDNL dau vao","xl/worksheets/ciscoCdnlInputs.xml");
+                var inputs=NewSheetDocument(); string[] headers={"Sheet","Ô","Giá trị đối chiếu","Lý do","Đang áp dụng","","Công thức gốc","Giá trị gốc","Kiểu gốc"};
+                for(int i=0;i<headers.Length;i++) SetCellInlineString(inputs,TimesheetImporter.ColName(i+1)+"1",headers[i],false);
+                var map=GetSheetMap(zip); var docs=new Dictionary<string,XmlDocument>();
+                foreach(var pair in data.Last.Cells) {
+                    int split=pair.Key.LastIndexOf('!'); string sheet=pair.Key.Substring(0,split),address=pair.Key.Substring(split+1),path;
+                    if(!map.TryGetValue(sheet,out path)) continue;
+                    XmlDocument doc; if(!docs.TryGetValue(path,out doc)) { doc=LoadCdnlSheet(zip,path,data); docs[path]=doc; }
+                    SetCellNumeric(doc,address,pair.Value,true);
+                }
+                // Keep untouched text/blank/error inputs intact; generic sheet saving must not
+                // turn a missing source point into a numeric fallback that changes later rates.
+                foreach(string key in data.Last.Inputs) {
+                    var original=data.SourceCell(key); if(original.IsNumber || !string.IsNullOrEmpty(original.Formula)) continue;
+                    string path; if(!map.TryGetValue(original.Sheet,out path)) continue;
+                    XmlDocument doc; if(!docs.TryGetValue(path,out doc)) { doc=LoadCdnlSheet(zip,path,data); docs[path]=doc; }
+                    if(original.IsError) { SetCellNumeric(doc,original.Address,0,false); var cell=GetSheetIndex(doc).Cells[original.Address]; while(cell.HasChildNodes) cell.RemoveChild(cell.FirstChild); cell.SetAttribute("t","e"); var v=doc.CreateElement("v",NsMain); v.InnerText=original.Text; cell.AppendChild(v); }
+                    else if(original.Text==null) { SetCellNumeric(doc,original.Address,0,false); var cell=GetSheetIndex(doc).Cells[original.Address]; while(cell.HasChildNodes) cell.RemoveChild(cell.FirstChild); cell.RemoveAttribute("t"); }
+                    else SetCellInlineString(doc,original.Address,original.Text,false);
+                }
+                int row=2;
+                foreach(var pair in data.Overrides) {
+                    var item=pair.Value; var original=item.Source;
+                    if(original==null) continue;
+                    SetCellInlineString(inputs,"A"+row,original.Sheet,false); SetCellInlineString(inputs,"B"+row,original.Address,false);
+                    SetCellNumeric(inputs,"C"+row,item.Value,false); SetCellInlineString(inputs,"D"+row,item.Reason,false);
+                    SetCellInlineString(inputs,"E"+row,item.Active?"True":"False",false);
+                    SetCellInlineString(inputs,"G"+row,original.Formula??"",false); SetCellInlineString(inputs,"H"+row,original.Text??"",false);
+                    SetCellInlineString(inputs,"I"+row,original.IsNumber?"number":original.IsError?"error":original.Text==null?"blank":"text",false);
+                    string sourcePath; if(map.TryGetValue(original.Sheet,out sourcePath)) {
+                        XmlDocument doc; if(!docs.TryGetValue(sourcePath,out doc)) { doc=LoadCdnlSheet(zip,sourcePath,data); docs[sourcePath]=doc; }
+                        if(item.Active) SetCraneFormula(doc,original.Address,"'CDNL dau vao'!C"+row,item.Value);
+                        else if(!string.IsNullOrEmpty(original.Formula)) {
+                            double current; if(!data.Last.Cells.TryGetValue(pair.Key,out current)) current=original.Number;
+                            SetCraneFormula(doc,original.Address,original.Formula,current);
+                        } else if(original.IsNumber) SetCellNumeric(doc,original.Address,original.Number,false);
+                        else if(original.Text==null) { SetCellNumeric(doc,original.Address,0,false); var blank=GetSheetIndex(doc).Cells[original.Address]; while(blank.HasChildNodes) blank.RemoveChild(blank.FirstChild); blank.RemoveAttribute("t"); }
+                        else { SetCellInlineString(doc,original.Address,original.Text??"",false); if(original.IsError) { var cell=GetSheetIndex(doc).Cells[original.Address]; while(cell.HasChildNodes) cell.RemoveChild(cell.FirstChild); cell.SetAttribute("r",original.Address); cell.SetAttribute("t","e"); var v=doc.CreateElement("v",NsMain); v.InnerText=original.Text; cell.AppendChild(v); } }
+                    }
+                    row++;
+                }
+                SaveSheetXml(zip,inputPath,inputs);
+                var rules=NewSheetDocument(); string[] ruleHeaders={"Hồ sơ","Nhóm","Điểm hưởng","Đơn giá điểm (đồng)","Lý do","Ô đơn giá nhóm"};
+                for(int i=0;i<ruleHeaders.Length;i++) SetCellInlineString(rules,TimesheetImporter.ColName(i+1)+"1",ruleHeaders[i],false);
+                row=2;
+                foreach(var pair in data.Rules) {
+                    var item=pair.Value; SetCellInlineString(rules,"A"+row,pair.Key,false); SetCellInlineString(rules,"B"+row,item.Group,false);
+                    SetCellNumeric(rules,"C"+row,item.Weight,false); SetCellNumeric(rules,"D"+row,item.Rate,false); SetCellInlineString(rules,"E"+row,item.Reason,false); SetCellInlineString(rules,"F"+row,item.RateCell??"",false);
+                    foreach(var e in ws.ListNhanVien) if(CdnlPayroll.EmployeeKey(e)==pair.Key && e.ExcelRow>0) {
+                        string path=map["CĐNL"]; XmlDocument doc; if(!docs.TryGetValue(path,out doc)) { doc=LoadCdnlSheet(zip,path,data); docs[path]=doc; }
+                        SetCraneFormula(doc,"AB"+e.ExcelRow,"'CDNL phan bo'!C"+row,item.Weight);
+                        double rate=item.Rate; if(!string.IsNullOrEmpty(item.RateCell)) data.Last.Cells.TryGetValue("CĐNL!"+item.RateCell,out rate);
+                        string rateFormula=string.IsNullOrEmpty(item.RateCell)?"'CDNL phan bo'!D"+row:"$AJ$"+item.RateCell.Substring(2);
+                        SetCraneFormula(doc,"AD"+e.ExcelRow,"ROUND(AB"+e.ExcelRow+"*"+rateFormula+",-2)",ManagementPayroll.RoundMoney(item.Weight*rate,100));
+                    }
+                    row++;
+                }
+                SaveSheetXml(zip,EnsureWorksheet(zip,"CDNL phan bo","xl/worksheets/ciscoCdnlRules.xml"),rules);
+                if(ws.TinhQuyQLTuSanLuong) {
+                    XmlDocument nt; if(!docs.TryGetValue(map["NT CĐNL"],out nt)) { nt=LoadCdnlSheet(zip,map["NT CĐNL"],data); docs[map["NT CĐNL"]]=nt; }
+                    SetCellNumeric(nt,"I422",ws.LuongSPQL,false); SetCellNumeric(nt,"I432",ws.LuongCheDoQL,false);
+                    XmlDocument employeeDoc; if(!docs.TryGetValue(map["CĐNL"],out employeeDoc)) { employeeDoc=LoadCdnlSheet(zip,map["CĐNL"],data); docs[map["CĐNL"]]=employeeDoc; }
+                    foreach(var e in ws.ListNhanVien) if(e.LaQuanLy && e.ExcelRow>0) {
+                        foreach(string col in new[] {"AB","AD","AE","AI","AJ","AK","AL","AC"}) { double amount; if(data.Last.Cells.TryGetValue("CĐNL!"+col+e.ExcelRow,out amount)) SetCellNumeric(employeeDoc,col+e.ExcelRow,amount,false); }
+                    }
+                }
+                if(ws.GnvDaChinhSua && docs.ContainsKey(map["NT CĐNL"])) { double sum=0; foreach(var item in ws.ListGNV) sum+=item.ThanhTien; SetCellNumeric(docs[map["NT CĐNL"]],"I371",sum,false); }
+                foreach(var pair in docs) SaveSheetXml(zip,pair.Key,pair.Value);
+                var report=NewSheetDocument(); SetCellInlineString(report,"A1","Da ap dung",false); SetCellInlineString(report,"B1","True",false);
+                SetCellInlineString(report,"A2","Tinh phan bo",false); SetCellInlineString(report,"B2",data.Distribute?"True":"False",false);
+                for(int i=0;i<CdnlPayroll.GroupCells.Length;i++) { string r=(i+4).ToString(); SetCellInlineString(report,"A"+r,CdnlPayroll.GroupNames[i],false); SetCellNumeric(report,"B"+r,data.Last.Groups[CdnlPayroll.GroupCells[i]],false); SetCellInlineString(report,"C"+r,"NT CĐNL!"+CdnlPayroll.GroupCells[i],false); }
+                SaveSheetXml(zip,EnsureWorksheet(zip,"CDNL ket qua","xl/worksheets/ciscoCdnlResults.xml"),report);
+            }
         }
 
         private static void SaveCranePayroll(ZipArchive zip, List<WorkshopData> workshops)
@@ -1690,13 +1825,14 @@ namespace CiscoLDTLApp
                     SetCellNumeric(empDoc, "V" + r, emp.CongAnCa, true);
                     if (emp.DiemSanXuat > 0 || emp.QuanLyTinhMoi)
                         SetCellNumeric(empDoc, "Y" + r, emp.DiemSanXuat, true);
-                    if (!string.IsNullOrEmpty(emp.XepLoai))
+                    if (!string.IsNullOrEmpty(emp.XepLoai) && (ws.Cdnl==null || ws.Cdnl.IsRatingRow(r)))
                         SetCellInlineString(empDoc, "Z" + r, emp.XepLoai, true);
                     if (emp.HeSoHuong > 0 || emp.QuanLyTinhMoi)
                     {
-                        SetCellNumeric(empDoc, "AA" + r, emp.HeSoHuong, true);
-                        SetCellNumeric(empDoc, "AB" + r, emp.HeSoHuong, true);
+                        if(ws.Cdnl==null) SetCellNumeric(empDoc, "AA" + r, emp.HeSoHuong, true);
+                        if(ws.Cdnl==null || ws.Cdnl.IsLiteralWeight(r) || emp.QuanLyTinhMoi) SetCellNumeric(empDoc, "AB" + r, emp.HeSoHuong, true);
                     }
+                    if(ws.Cdnl==null || (ws.Cdnl.Applied && ws.Cdnl.Distribute) || emp.QuanLyTinhMoi) {
                     SetCellNumeric(empDoc, "AC" + r, emp.TongTienLuong, true);
                     SetCellNumeric(empDoc, "AD" + r, emp.LuongSanPham, true);
                     SetCellNumeric(empDoc, "AE" + r, emp.LuongLePhepCD, true);
@@ -1706,6 +1842,7 @@ namespace CiscoLDTLApp
                         SetCellNumeric(empDoc, "AJ" + r, emp.LuongHocVHTT, true);
                     if (emp.PhuCapTien > 0 || emp.QuanLyTinhMoi)
                         SetCellNumeric(empDoc, "AL" + r, emp.PhuCapTien, true);
+                    }
                 }
 
                 // Đồng thời cập nhật dòng tương ứng trong sheet 'Tổng hợp công' (nếu có) để các công thức INDEX/MATCH/SUMIF tự động khớp 100%!
@@ -1991,6 +2128,7 @@ namespace CiscoLDTLApp
                         if (loaded.MaPX == ws.MaPX)
                         {
                             CopyWorkshopValues(loaded, ws);
+                            if(ws.Cdnl!=null && workshops!=null && !object.ReferenceEquals(ws.Cdnl.Workshops,workshops)) { ws.Cdnl.Workshops.Clear(); ws.Cdnl.Workshops.AddRange(workshops); }
                             log.AppendLine(string.Format("- Đã nạp đầy đủ danh sách chi tiết {0} người lao động (sheet '{1}') và bảng nghiệm thu '{2}'.", ws.ListNhanVien.Count, ws.SheetBangCong, ws.SheetNT));
                             break;
                         }
@@ -2254,6 +2392,7 @@ namespace CiscoLDTLApp
             dst.SanLuongPhuKL = src.SanLuongPhuKL;
             dst.SanLuongPhuTT = src.SanLuongPhuTT;
             dst.SanLuongPhuName = src.SanLuongPhuName;
+            dst.Cdnl = src.Cdnl;
             dst.CauPhoiDaApDung = src.CauPhoiDaApDung;
             dst.CauPhoiKhoanKhac = src.CauPhoiKhoanKhac;
             for(int i=0;i<3;i++) { dst.CauPhoi[i].Regular=src.CauPhoi[i].Regular; dst.CauPhoi[i].Holiday=src.CauPhoi[i].Holiday; dst.CauPhoi[i].Rate=src.CauPhoi[i].Rate; }

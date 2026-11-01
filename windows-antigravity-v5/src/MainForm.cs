@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.5";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.6";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.5)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.6)");
             crane.Click += (sender, args) => {
                 if (_workshops == null || _currentIndex < 0) return;
                 CommitAllGridEdits();
@@ -258,7 +258,7 @@ namespace CiscoLDTLApp
                 using (var form = new CranePayrollForm(ws))
                     if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
             };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.5)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.6)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -274,6 +274,16 @@ namespace CiscoLDTLApp
             };
             payrollMenu.Items.Add(management);
             payrollMenu.Items.Add(crane);
+            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.6)");
+            cdnl.Click+=(sender,args)=> {
+                if(_workshops==null || _currentIndex<0) return;
+                CommitAllGridEdits(); SaveUIToCurrentWorkshop(); var ws=_workshops[_currentIndex];
+                if(ws.MaPX!="CDNL") { MessageBox.Show(this,"Chọn PX Cơ điện Năng lượng trước."); return; }
+                try { using(var form=new CdnlPayrollForm(ws)) if(form.ShowDialog(this)==DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); } }
+                catch(ArgumentException ex) { MessageBox.Show(this,ex.Message); }
+            };
+            payrollMenu.Items.Add(cdnl);
+
             Controls.Add(payrollMenu);
             payrollMenu.BringToFront();
 
@@ -1089,6 +1099,7 @@ namespace CiscoLDTLApp
             _isLoadingUI = true;
 
             var ws = _workshops[_currentIndex];
+            if(ws.Cdnl!=null && ws.Cdnl.Applied && ws.Cdnl.Recalculate(ws)) ws.RecalculateDerived();
             numThang.Value = Clamp(ws.Thang, 1, 12);
             numNam.Value = Clamp(ws.Nam, 2020, 2035);
             cboLoaiKy.SelectedIndex = (int)ws.LoaiKy;
@@ -1371,6 +1382,7 @@ namespace CiscoLDTLApp
             AddMetricRow(dgvAnCaBDDH, "8. BDĐH Mức 3 (26.000đ) - Thành tiền", "Đồng", ws.BDDH_Muc3_Tien, ws.KyQuy.BDDH_Muc3_Tien, ws.KyLuyKe.BDDH_Muc3_Tien, 0);
             AddMetricRow(dgvAnCaBDDH, "9. TỔNG TIỀN BỒI DƯỠNG ĐỘC HẠI", "Đồng", ws.TongTienBDDH, ws.KyQuy.TongTienBDDH, ws.KyLuyKe.TongTienBDDH, 0);
 
+            foreach(DataGridViewRow row in dgvTienLuong.Rows) row.Cells[2].ReadOnly=ws.MaPX=="CDNL" && ws.Cdnl!=null && ws.Cdnl.Applied;
             _isLoadingUI = prevLoading;
         }
 
@@ -1642,7 +1654,8 @@ namespace CiscoLDTLApp
         private void RefreshPreview()
         {
             if (_workshops == null || _currentIndex < 0) return;
-            rtbPreview.Text = WordReportService.GeneratePreviewText(_workshops[_currentIndex]);
+            try { rtbPreview.Text = WordReportService.GeneratePreviewText(_workshops[_currentIndex]); }
+            catch(ArgumentException ex) { rtbPreview.Text=ex.Message; SetStatus(ex.Message); }
         }
 
         private static double ParseVN(object val)

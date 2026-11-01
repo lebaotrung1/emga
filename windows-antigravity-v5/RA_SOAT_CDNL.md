@@ -1,3 +1,15 @@
+# Cập nhật v5.6
+
+Đã bổ sung bộ tính và màn hình CĐNL riêng. Các nhận xét dưới đây là kết quả rà soát dùng để triển khai, không còn chỉ là giới hạn của v5.5. Xem hướng dẫn v5.6 trong README để dùng công cụ.
+
+- Quỹ 5 nhóm trực tiếp và quản lý đọc công thức thực tế; từng người theo công thức AD/AB, đơn giá và các khoản riêng.
+- Không áp bộ phân bổ chung cũ cho CĐNL. Z của một số dòng vận tải là đại lượng số tham chiếu quỹ/đơn giá PX khác, không phải xếp loại.
+- Các lỗi nguồn cần đối chiếu trước khi tính toàn bộ phân bổ: `THop (có tạm ứng)!I51`, `CĐNL!AH5`, `CĐNL!AB98:AB101`. Còn các dòng có công nhưng AD trống và lỗi tra cứu mã nguồn liên kết; không tự điền 0 hoặc coi số lương đọc cũ là kết quả mới. Không tự sửa giá trị; giao diện hỗ trợ nhập thay thế có lý do và khôi phục nguồn gốc.
+- Tính quỹ hoạt động độc lập. Xuất Word có phân bổ đầy đủ chỉ khi bộ tính tương ứng hợp lệ; không gắn bảng lương cũ vào kết quả mới chỉ tính quỹ.
+- Quản lý theo sản lượng dùng đơn giá QL riêng khi người dùng đã bật. GNV chỉnh trong ứng dụng đi qua quỹ sửa chữa một lần.
+
+---
+
 # Rà soát công thức CĐNL cho v5.5
 
 Đã đọc công thức của bản Excel nguồn người dùng gửi trong phiên sửa này. Tệp nguồn được giữ ngoài checkout và không đưa vào gói hoặc GitHub. Tài liệu chỉ ghi cấu trúc công thức, không chép nhân sự, sản lượng, đơn giá hay số lương thực tế.
