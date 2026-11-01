@@ -296,7 +296,7 @@ namespace CiscoLDTLApp
                                 {
                                     string v = Cell(doc, ss, c, r).ToUpperInvariant();
                                     if (v == "") continue;
-                                    foreach (string tk in v.Split(','))
+                                    foreach (string tk in v.Split(new char[] { ',' }, StringSplitOptions.None))
                                     {
                                         string x = tk.Trim();
                                         if (x == "M1") m1++;

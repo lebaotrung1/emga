@@ -11,4 +11,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Import test build failed' }
     & .\ImportTests_v5.exe
     if ($LASTEXITCODE -ne 0) { throw 'Import tests failed' }
+    & $csc /nologo /target:exe /out:FrameworkCompatibilityTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll tests/FrameworkCompatibilityTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Framework compatibility test build failed' }
+    & .\FrameworkCompatibilityTests.exe
+    if ($LASTEXITCODE -ne 0) { throw 'Framework compatibility tests failed' }
 } finally { Pop-Location }
