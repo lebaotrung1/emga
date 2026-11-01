@@ -50,6 +50,7 @@ namespace CiscoLDTLApp
 
         // Tab 4: Công phát sinh (GNV) & Kiến nghị
         private DataGridView dgvGNV;
+        private bool _updatingGNV;
         private TextBox txtKienNghi;
 
         // Tab 5: Xem trước & Điền / Xuất Biên bản Word
@@ -58,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.3";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.4";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -247,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.3)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.4)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -854,14 +855,18 @@ namespace CiscoLDTLApp
             var btnAddGNV = CreateActionButton("+ Thêm dòng GNV", new Point(8, 5), new Size(150, 30), Color.FromArgb(41, 128, 185));
             btnAddGNV.Click += (s, e) =>
             {
-                dgvGNV.Rows.Add(dgvGNV.Rows.Count, "GNV số ...: Nội dung công việc phát sinh", "Công", "0", "315000", "0", "");
+                int row = dgvGNV.Rows.Add(dgvGNV.Rows.Count, "GNV số ...: Nội dung công việc phát sinh", "Công", "0", "0", "0", "");
+                dgvGNV.Rows[row].Tag = new ArisingWorkItem { TuTinhThanhTien=true };
+                GnvInputChanged();
             };
 
             var btnCalcGNV = CreateActionButton("Tính tổng GNV & Đưa vào Lương CV Khác + Biên bản", new Point(168, 5), new Size(340, 30), Color.FromArgb(39, 174, 96));
             btnCalcGNV.Click += (s, e) =>
             {
                 SaveUIToCurrentWorkshop();
+                _workshops[_currentIndex].GnvDaChinhSua=true;
                 _workshops[_currentIndex].RecalculateDerived();
+                _workshops[_currentIndex].RecalculateFromEmployees(true);
                 LoadCurrentWorkshopToUI();
                 MessageBox.Show(string.Format("Đã cập nhật tổng khối lượng ({0:N1} công) và thành tiền ({1:N0} đồng) từ bảng GNV vào Bảng nghiệm thu và Biên bản!", _workshops[_currentIndex].CongCVKhac, _workshops[_currentIndex].LuongCVKhac), "Thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
@@ -891,6 +896,20 @@ namespace CiscoLDTLApp
             dgvGNV.Columns[4].Width = 140;
             dgvGNV.Columns[5].Width = 160;
             dgvGNV.Columns[6].Width = 140;
+            dgvGNV.Columns[0].ReadOnly = true;
+            dgvGNV.Columns[5].ReadOnly = true;
+            dgvGNV.Columns[5].DefaultCellStyle.BackColor = Color.FromArgb(235,242,248);
+            dgvGNV.CellEndEdit += (sender,args) =>
+            {
+                if (_isLoadingUI || _updatingGNV || args.RowIndex < 0) return;
+                var row=dgvGNV.Rows[args.RowIndex];
+                var item=row.Tag as ArisingWorkItem;
+                if(item==null) { item=new ArisingWorkItem { TuTinhThanhTien=true }; row.Tag=item; }
+                if(args.ColumnIndex==3 || args.ColumnIndex==4) item.TuTinhThanhTien=true;
+                GnvInputChanged();
+            };
+            dgvGNV.RowsRemoved += (sender,args) => GnvInputChanged();
+
 
             grpGNV.Controls.Add(dgvGNV);
             grpGNV.Controls.Add(pnlGNVButtons);
@@ -913,6 +932,28 @@ namespace CiscoLDTLApp
             split.Panel1.Controls.Add(grpGNV);
             split.Panel2.Controls.Add(grpKienNghi);
             tab.Controls.Add(split);
+        }
+
+        private void GnvInputChanged()
+        {
+            if(_isLoadingUI || _updatingGNV || Disposing || IsDisposed || _workshops==null || _currentIndex<0
+                || dgvGNV==null || dgvGNV.Disposing || dgvGNV.IsDisposed || dgvGNV.Columns.Count<7
+                || dgvTienLuong==null || dgvTienLuong.Columns.Count<5 || dgvNgayCong.Columns.Count<5) return;
+            _updatingGNV=true;
+            try
+            {
+                var ws=_workshops[_currentIndex]; ws.GnvDaChinhSua=true;
+                SaveUIToCurrentWorkshop();
+                ws.RecalculateDerived(); ws.RecalculateFromEmployees(true);
+                _isLoadingUI=true;
+                foreach(DataGridViewRow row in dgvGNV.Rows)
+                    if(!row.IsNewRow && row.Tag is ArisingWorkItem)
+                        row.Cells[5].Value=WordReportService.FmtInt(((ArisingWorkItem)row.Tag).ThanhTien);
+                RefreshSummaryGridsFromWorkshop(ws); PopulateEmployeeGridRows();
+                _isLoadingUI=false; RefreshPreview();
+                SetStatus(ws.MaPX=="CDNL" ? "Đã tính tiền GNV = khối lượng × đơn giá. CĐNL giữ cách tổng hợp riêng, không cộng trùng quỹ." : "Đã tính lại tiền GNV, tổng công, lương công việc khác và lương phân bổ. Chưa lưu Excel.");
+            }
+            finally { _isLoadingUI=false; _updatingGNV=false; }
         }
 
         private void BuildTab4(TabPage tab)
@@ -1096,15 +1137,16 @@ namespace CiscoLDTLApp
             dgvGNV.Rows.Clear();
             foreach (var g in ws.ListGNV)
             {
-                dgvGNV.Rows.Add(
+                int row = dgvGNV.Rows.Add(
                     g.STT,
                     g.NoiDung,
                     g.DVT,
                     WordReportService.FmtDec(g.KhoiLuong, 2),
                     WordReportService.FmtInt(g.DonGia),
                     WordReportService.FmtInt(g.ThanhTien),
-                    g.ExcelRow > 0 ? string.Format("Dòng {0}", g.ExcelRow) : g.GhiChu
+                    g.GhiChu
                 );
+                dgvGNV.Rows[row].Tag=g;
             }
 
             txtKienNghi.Text = string.Join(Environment.NewLine, ws.KienNghi);
@@ -1563,9 +1605,12 @@ namespace CiscoLDTLApp
                 string dvt = (Convert.ToString(r.Cells[2].Value) ?? "").Trim();
                 double kl = ParseVN(r.Cells[3].Value);
                 double dg = ParseVN(r.Cells[4].Value);
-                double tt = ParseVN(r.Cells[5].Value);
-                if (tt == 0 && kl > 0 && dg > 0) tt = Math.Round(kl * dg, 0);
-                ws.ListGNV.Add(new ArisingWorkItem(stt++, nd, dvt, kl, dg, tt));
+                var previous=r.Tag as ArisingWorkItem;
+                bool automatic=previous==null || previous.TuTinhThanhTien;
+                double tt=automatic ? ManagementPayroll.RoundMoney(kl*dg,1) : ParseVN(r.Cells[5].Value);
+                if(tt==0 && kl>0 && dg>0) tt=ManagementPayroll.RoundMoney(kl*dg,1);
+                var item=new ArisingWorkItem(stt++,nd,dvt,kl,dg,tt,Convert.ToString(r.Cells[6].Value) ?? "",previous==null?0:previous.ExcelRow) { TuTinhThanhTien=automatic };
+                ws.ListGNV.Add(item); r.Tag=item;
             }
 
             ws.KienNghi.Clear();

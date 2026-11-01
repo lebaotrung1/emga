@@ -19,4 +19,8 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Management production and Word test build failed' }
     & .\ManagementProductionAndWordTests.exe
     if ($LASTEXITCODE -ne 0) { throw 'Management production and Word tests failed' }
+    & $csc /nologo /target:exe /out:GnvCalculationTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.Windows.Forms.dll tests/GnvCalculationTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'GNV test build failed' }
+    & .\GnvCalculationTests.exe
+    if ($LASTEXITCODE -ne 0) { throw 'GNV tests failed' }
 } finally { Pop-Location }

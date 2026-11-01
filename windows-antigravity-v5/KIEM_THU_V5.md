@@ -1,4 +1,4 @@
-# Bản hiện hành: v5.3
+# Bản hiện hành: v5.4
 
 Hướng dẫn sử dụng/công thức hiện hành nằm trong **README.md**. Các mục v5/v5.1/v5.2 dưới đây là lịch sử; cách nhập tổng quỹ quản lý bằng tay được thay bằng sản lượng × đơn giá quản lý ở v5.3.
 
@@ -72,3 +72,9 @@ Người dùng xác nhận: tách loại 1/loại 2/ngày lễ; nhập đơn gi�
 Word: chuyển mọi khoản thành tiền, quỹ tháng/quý/lũy kế, bình quân (đúng hệ số nghìn đồng), GNV, BDĐH, chi tiết nhân viên sang triệu đồng, đúng một chữ số thập phân vi-VN; số nguyên và số 0 vẫn có ,0. Đơn giá theo công/đơn vị có nhãn đồng riêng để không làm mất các mức nhỏ. Không đổi số liệu tính toán/Excel, không đổi định dạng số lượng/công, không chuyển đơn vị lần hai khi cập nhật mẫu. Các biên bản lịch sử trước phần đang cập nhật được giữ nguyên.
 
 382 kiểm tra mới đạt: mô hình quỹ/đơn giá lễ tự gấp đôi, sản lượng/đơn giá 0, giá quản lý độc lập trực tiếp, lưu/mở lại hai lần trên 5 PX; xuất mới và cập nhật 50 DOCX giả (5 PX × 5 kỳ × 2 đường xuất), đọc XML kiểm tra đơn vị và giá trị tiền, bảng chi tiết, đổi bình quân từ nghìn đúng hệ số, độ chính xác cố định một số lẻ. Smoke test giao diện bổ sung nhập đơn giá, quỹ chỉ đọc, tự nhân đôi giá lễ, xem trước không ghi, áp dụng lưu, hủy không đổi; đạt. Các bộ kiểm thử cũ tiếp tục đạt. Chưa chạy trực tiếp trên Windows/Microsoft Word. Không đưa dữ liệu hoặc DOCX kiểm thử lên GitHub.
+
+## v5.4 — tính lại thành tiền GNV khi sửa công/đơn giá
+
+Bản cũ chỉ nhân khi thành tiền đang bằng 0. Dòng mới/đã sửa nay tự nhân lại công/khối lượng × đơn giá (làm tròn đồng), kể cả 0; ô thành tiền chỉ đọc. Dòng nguồn chưa sửa giữ số tiền nguồn vì có thể có làm tròn/giảm trừ riêng. Tính GNV trước khi phân bổ lương để không dùng tổng kỳ trước; xóa dòng cuối xóa tổng (CĐNL giữ nguyên quy tắc quỹ riêng, không cộng hai lần). Giữ dòng Excel/giai thích gốc khi sửa, lưu danh sách đã chỉnh trong GNV v5 và khôi phục đúng kể cả danh sách rỗng. Giữ nguyên số âm cho khoản điều chỉnh.
+
+GnvCalculationTests: 18 kiểm tra mô hình/lưu–mở Excel của 5 PX, 15 kiểm tra mô hình/giao diện, gồm sửa tiền cũ, công/giá 0, khôi phục, khoản âm, giữ số nguồn chưa sửa, lưu dòng gốc/ghi chú, xóa dòng cuối và tiền lương phân bổ; đạt. Đã kiểm tra thêm đóng cửa sổ không kích hoạt tính lại trong lúc hủy các điều khiển. Kiểm thử trên Linux/Mono, chưa chạy trực tiếp Windows. Giữ thay đổi v5.3 về quỹ quản lý và tiền Word triệu đồng.

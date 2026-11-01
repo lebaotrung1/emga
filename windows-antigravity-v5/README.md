@@ -1,17 +1,25 @@
-# Ứng dụng Windows v5.3 — quỹ quản lý theo sản lượng và báo cáo Word triệu đồng
+# Ứng dụng Windows v5.4 — quỹ quản lý theo sản lượng và báo cáo Word triệu đồng
 
 Ứng dụng Windows riêng trong nhánh `antigravity-payroll-v5`; không thay ứng dụng Emga trên nhánh chính.
 
 ## Tải và cập nhật
 
-Tải `antigravity_v5_3_program_only.zip` bằng nút **Download raw** trên trang tệp GitHub. Đóng chương trình, giải nén rồi chép `CiscoLDTLApp_v5.exe` và `Chay_Ung_Dung.bat` trong thư mục `antigravity` vào thư mục bản đang dùng, chọn thay thế. Giữ nguyên **Data** và **Templates**, sao lưu Excel trước khi kiểm tra.
+Tải `antigravity_v5_4_program_only.zip` bằng nút **Download raw** trên trang tệp GitHub. Đóng chương trình, giải nén rồi chép `CiscoLDTLApp_v5.exe` và `Chay_Ung_Dung.bat` trong thư mục `antigravity` vào thư mục bản đang dùng, chọn thay thế. Giữ nguyên **Data** và **Templates**, sao lưu Excel trước khi kiểm tra.
 
-Chạy `Chay_Ung_Dung.bat`. Menu/tiêu đề phải hiện **v5.3**, thuộc tính EXE là **5.3.0.0**. Tên EXE vẫn là v5 để launcher cũ tương thích. Gói chỉ có chương trình/mã nguồn/hướng dẫn/kiểm thử, không chứa Excel, mẫu Word, hồ sơ nhân sự, tên thật hay số lương mẫu.
+Chạy `Chay_Ung_Dung.bat`. Menu/tiêu đề phải hiện **v5.4**, thuộc tính EXE là **5.4.0.0**. Tên EXE vẫn là v5 để launcher cũ tương thích. Gói chỉ có chương trình/mã nguồn/hướng dẫn/kiểm thử, không chứa Excel, mẫu Word, hồ sơ nhân sự, tên thật hay số lương mẫu.
+
+## Tính tiền công GNV (v5.4)
+
+Dòng mới hoặc dòng có sửa khối lượng/số công hay đơn giá tự tính **thành tiền = khối lượng × đơn giá**, làm tròn đến đồng. Sửa công/giá về 0 hoặc xóa nội dung ô số sẽ đưa tiền về 0; cột thành tiền chỉ đọc. Sau khi kết thúc sửa ô, tổng GNV và lương phân bổ được cập nhật. Xóa dòng cuối không giữ tổng tiền cũ.
+
+Dòng vừa nhập từ Excel nhưng chưa sửa vẫn giữ số tiền nguồn để không phá các công thức giảm trừ/làm tròn riêng. Sau khi sửa công/đơn giá, dòng chuyển sang tính theo phép nhân. Vẫn hỗ trợ số âm cho khoản điều chỉnh. CĐNL giữ cách tổng hợp quỹ riêng của bản gốc, không cộng trùng GNV vào quỹ đã có.
+
+Bấm **Lưu Excel** để lưu thay đổi. Sheet **GNV v5** giữ danh sách/đầu vào đã chỉnh, dòng Excel gốc và trạng thái tự tính (kể cả danh sách đã xóa hết), ưu tiên khi ứng dụng đọc lại. Nếu sửa GNV trực tiếp bằng Excel sau đó, cần đối chiếu với dữ liệu ứng dụng đã lưu trong sheet này. Các công thức NT cũ vẫn có thể tính lại theo quy tắc riêng khi mở Excel; kiểm tra các biểu gốc trước khi dùng thanh toán.
 
 ## Quỹ lương quản lý tính từ sản lượng
 
 1. Chọn phân xưởng, tháng/năm và nạp Excel của đơn vị. Kiểm tra sản lượng **loại 1, loại 2, ngày lễ** tại bảng sản xuất. Nếu chưa có dữ liệu nguồn, nhập sản lượng tương ứng ở đó.
-2. Mở menu **TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.3)**. Nhập **đơn giá quản lý loại 1** và **đơn giá quản lý loại 2** (đồng/đơn vị sản lượng). Đây là đơn giá riêng, không dùng đơn giá lao động trực tiếp.
+2. Mở menu **TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.4)**. Nhập **đơn giá quản lý loại 1** và **đơn giá quản lý loại 2** (đồng/đơn vị sản lượng). Đây là đơn giá riêng, không dùng đơn giá lao động trực tiếp.
 3. Đơn giá quản lý ngày lễ **tự bằng 2 × đơn giá quản lý loại 1**, chỉ hiển thị, không nhập riêng. Quỹ sản phẩm quản lý = SL loại 1 × ĐG QL loại 1 + SL loại 2 × ĐG QL loại 2 + SL lễ × (2 × ĐG QL loại 1). Mỗi dòng làm tròn đến đồng rồi cộng, không nhập tổng quỹ bằng tay.
 4. Kiểm tra quỹ vừa tính, bấm **Tính / xem trước**, kiểm tra hệ số/công/xếp loại từng người rồi **Áp dụng vào bảng nghiệm thu**. Quỹ được phân bổ cho quản lý theo công/hệ số/xếp loại như bản trước; lễ phép/học/phụ cấp và điều chỉnh chung vẫn tách riêng để tránh cộng trùng.
 5. Bấm **Lưu Excel**. Đơn giá/chế độ tính được lưu riêng cho từng PX trong sheet **Quy QL san luong**; giữ sheet này và **Nhan su bo sung**. Sheet **Luong quan ly v5** chứa tổng hợp và chi tiết lương.

@@ -35,6 +35,7 @@ namespace CiscoLDTLApp
         public double ThanhTien { get; set; }
         public string GhiChu { get; set; }
         public int ExcelRow { get; set; }
+        public bool TuTinhThanhTien { get; set; }
 
         public ArisingWorkItem() { }
         public ArisingWorkItem(int stt, string noiDung, string dvt, double kl, double dg, double tt, string ghiChu = "", int row = 0)
@@ -342,6 +343,7 @@ namespace CiscoLDTLApp
         public double TongTienBDDH { get; set; }
 
         // Danh sách công phát sinh / GNV trong tháng
+        public bool GnvDaChinhSua { get; set; }
         public List<ArisingWorkItem> ListGNV { get; set; }
 
         // Số liệu nền (Các tháng trước trong Quý & Các Quý trước trong Năm) để tự động cộng lũy kế
@@ -384,6 +386,7 @@ namespace CiscoLDTLApp
         /// </summary>
         public void RecalculateFromEmployees(bool redistributeProductSalary = true)
         {
+            RecalculateGnv();
             if (ListNhanVien == null || ListNhanVien.Count == 0)
             {
                 RecalculateDerived();
@@ -731,6 +734,28 @@ namespace CiscoLDTLApp
             }
         }
 
+        public void RecalculateGnv()
+        {
+            double sumGNVCong = 0;
+            double sumGNVTien = 0;
+            if (ListGNV != null && (ListGNV.Count > 0 || GnvDaChinhSua))
+            {
+                foreach (var item in ListGNV)
+                {
+                    if (item.TuTinhThanhTien || (item.KhoiLuong > 0 && item.DonGia > 0 && item.ThanhTien == 0))
+                        item.ThanhTien = ManagementPayroll.RoundMoney(item.KhoiLuong * item.DonGia, 1);
+                    sumGNVCong += item.KhoiLuong;
+                    sumGNVTien += item.ThanhTien;
+                }
+                if (MaPX != "CDNL")
+                {
+                    CongCVKhac = sumGNVCong;
+                    LuongCVKhac = sumGNVTien;
+                }
+            }
+
+        }
+
         public void RecalculateDerived()
         {
             ManagementProductionPayroll.UpdateFund(this);
@@ -745,23 +770,7 @@ namespace CiscoLDTLApp
             if (LDTrucTiep > 0)
                 NgayCongBQLDTT = Math.Round(CongLDTT / LDTrucTiep, 2);
 
-            double sumGNVCong = 0;
-            double sumGNVTien = 0;
-            if (ListGNV != null && ListGNV.Count > 0)
-            {
-                foreach (var item in ListGNV)
-                {
-                    if (item.KhoiLuong > 0 && item.DonGia > 0 && item.ThanhTien == 0)
-                        item.ThanhTien = Math.Round(item.KhoiLuong * item.DonGia, 0);
-                    sumGNVCong += item.KhoiLuong;
-                    sumGNVTien += item.ThanhTien;
-                }
-                if (MaPX != "CDNL")
-                {
-                    CongCVKhac = sumGNVCong;
-                    LuongCVKhac = sumGNVTien;
-                }
-            }
+            RecalculateGnv();
 
             BDDH_Muc1_Tien = BDDH_Muc1_Cong * 13000;
             BDDH_Muc2_Tien = BDDH_Muc2_Cong * 20000;

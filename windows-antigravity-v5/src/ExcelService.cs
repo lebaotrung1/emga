@@ -675,6 +675,7 @@ namespace CiscoLDTLApp
             {
                 LoadAdditionalEmployees(zip, workshops);
                 LoadManagementProductionSettings(zip, workshops);
+                LoadEditedGnv(zip, workshops);
             }
             return workshops;
         }
@@ -1246,6 +1247,7 @@ namespace CiscoLDTLApp
                 // Bật cờ fullCalcOnLoad="1" trong xl/workbook.xml để khi mở bằng Excel, mọi công thức tự động tính toán lại 100%
                 SaveAdditionalEmployees(zip, workshops);
                 SaveManagementProductionSettings(zip, workshops);
+                SaveEditedGnv(zip, workshops);
                 SaveManagementPayrollReport(zip, workshops);
                 EnsureFullCalcOnLoad(zip);
             }
@@ -1323,6 +1325,58 @@ namespace CiscoLDTLApp
                     rowNumber++;
                 }
             SaveSheetXml(zip, path, doc);
+        }
+
+        private static void SaveEditedGnv(ZipArchive zip, List<WorkshopData> workshops)
+        {
+            bool edited=false; foreach(var ws in workshops) if(ws.GnvDaChinhSua) edited=true;
+            if(!edited) return;
+            string path=EnsureWorksheet(zip,"GNV v5","xl/worksheets/ciscoGnv.xml");
+            var doc=new XmlDocument(); doc.LoadXml("<worksheet xmlns='"+NsMain+"'><sheetData/></worksheet>");
+            string[] names={"MaPX","HasItem","NoiDung","DVT","KhoiLuong","DonGia","ThanhTien","ExcelRow","GhiChu","TuTinhThanhTien"};
+            for(int c=0;c<names.Length;c++) SetCellInlineString(doc,TimesheetImporter.ColName(c+1)+"1",names[c],false);
+            int row=2;
+            foreach(var ws in workshops)
+            {
+                if(!ws.GnvDaChinhSua) continue;
+                if(ws.ListGNV.Count==0)
+                { SetCellInlineString(doc,"A"+row,ws.MaPX,false); SetCellInlineString(doc,"B"+row,"False",false); row++; }
+                foreach(var item in ws.ListGNV)
+                {
+                    SetCellInlineString(doc,"A"+row,ws.MaPX,false); SetCellInlineString(doc,"B"+row,"True",false);
+                    SetCellInlineString(doc,"C"+row,item.NoiDung,false); SetCellInlineString(doc,"D"+row,item.DVT,false);
+                    SetCellNumeric(doc,"E"+row,item.KhoiLuong,false); SetCellNumeric(doc,"F"+row,item.DonGia,false);
+                    SetCellNumeric(doc,"G"+row,item.ThanhTien,false); SetCellNumeric(doc,"H"+row,item.ExcelRow,false);
+                    SetCellInlineString(doc,"I"+row,item.GhiChu,false);
+                    SetCellInlineString(doc,"J"+row,item.TuTinhThanhTien?"True":"False",false); row++;
+                }
+            }
+            SaveSheetXml(zip,path,doc);
+        }
+
+        private static void LoadEditedGnv(ZipArchive zip, List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip); string path;
+            if(!map.TryGetValue("GNV v5",out path)) return;
+            var doc=LoadSheetXml(zip,path); var strings=LoadSharedStrings(zip);
+            var seen=new HashSet<string>();
+            foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain))
+            {
+                int r=int.Parse(row.GetAttribute("r")); if(r<2) continue;
+                string code=GetCellString(doc,strings,"A"+r);
+                foreach(var ws in workshops)
+                {
+                    if(ws.MaPX!=code) continue;
+                    if(seen.Add(code)) { ws.ListGNV.Clear(); ws.GnvDaChinhSua=true; }
+                    if(GetCellString(doc,strings,"B"+r)!="True") continue;
+                    var item=new ArisingWorkItem(ws.ListGNV.Count+1,GetCellString(doc,strings,"C"+r),GetCellString(doc,strings,"D"+r),
+                        GetCellDouble(doc,strings,"E"+r,0),GetCellDouble(doc,strings,"F"+r,0),GetCellDouble(doc,strings,"G"+r,0),
+                        GetCellString(doc,strings,"I"+r),(int)GetCellDouble(doc,strings,"H"+r,0))
+                        { TuTinhThanhTien=GetCellString(doc,strings,"J"+r)=="True" };
+                    ws.ListGNV.Add(item);
+                }
+            }
+            foreach(var ws in workshops) if(seen.Contains(ws.MaPX)) ws.RecalculateDerived();
         }
 
         private static void SaveManagementProductionSettings(ZipArchive zip, List<WorkshopData> workshops)
@@ -1797,7 +1851,7 @@ namespace CiscoLDTLApp
                 SetCellInlineString(doc, "B" + r, item.NoiDung, false);
                 SetCellInlineString(doc, "C" + r, string.IsNullOrEmpty(item.DVT) ? "Công" : item.DVT, false);
                 SetCellNumeric(doc, colKL + r, item.KhoiLuong, true);
-                if (item.DonGia > 0) SetCellNumeric(doc, colDG + r, item.DonGia, true);
+                if (item.DonGia > 0 || item.TuTinhThanhTien) SetCellNumeric(doc, colDG + r, item.DonGia, true);
                 SetCellNumeric(doc, colTT + r, item.ThanhTien, true);
                 idx++;
             }
