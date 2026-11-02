@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.11";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.12";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.11)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.12)");
             crane.Click += (sender, args) => {
                 if (_workshops == null || _currentIndex < 0) return;
                 CommitAllGridEdits();
@@ -258,7 +258,7 @@ namespace CiscoLDTLApp
                 using (var form = new CranePayrollForm(ws))
                     if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
             };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.11)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.12)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -274,7 +274,7 @@ namespace CiscoLDTLApp
             };
             payrollMenu.Items.Add(management);
             payrollMenu.Items.Add(crane);
-            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.11)");
+            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.12)");
             cdnl.Click+=(sender,args)=> {
                 if(_workshops==null || _currentIndex<0) return;
                 CommitAllGridEdits(); SaveUIToCurrentWorkshop(); var ws=_workshops[_currentIndex];
@@ -782,9 +782,17 @@ namespace CiscoLDTLApp
             {
                 if (!_isLoadingUI)
                 {
+                    if(e.ColumnIndex==2 && e.RowIndex>=9 && e.RowIndex<=11) {
+                        var unit=_workshops[_currentIndex];unit.ManagementSummaryEdited=true;
+                        double input=ParseVN(dgvTienLuong.Rows[e.RowIndex].Cells[2].Value);
+                        if(e.RowIndex==9){unit.ManualManagementFund=true;unit.LuongSPQL=input;}
+                        if(e.RowIndex==10)unit.ManualManagementOther=input;
+                        if(e.RowIndex==11)unit.DieuChinhLuongQL=input;
+                    }
                     SaveUIToCurrentWorkshop();
-                    RefreshSummaryGridsFromWorkshop(_workshops[_currentIndex]);
+                    if(e.ColumnIndex==2 && e.RowIndex==9 && ManagementPayroll.IsApplied(_workshops[_currentIndex]))ManagementPayroll.Recalculate(_workshops[_currentIndex]);
                     RefreshPreview();
+                    RefreshSummaryGridsFromWorkshop(_workshops[_currentIndex]);
                 }
             };
             grpLuong.Controls.Add(dgvTienLuong);
@@ -1373,12 +1381,13 @@ namespace CiscoLDTLApp
             AddMetricRow(dgvTienLuong, "   1.6. Giảm trừ tiền lương (nếu có)", "Đồng", ws.TruLuong, ws.KyQuy.TruLuong, ws.KyLuyKe.TruLuong, 0);
             AddMetricRow(dgvTienLuong, "2. Tiền lương Lao động quản lý", "Đồng", ws.TongLuongQL, ws.KyQuy.TongLuongQL, ws.KyLuyKe.TongLuongQL, 0);
             AddMetricRow(dgvTienLuong, "   2.1. Tiền lương sản phẩm QL", "Đồng", ws.LuongSPQL, ws.KyQuy.LuongSPQL, ws.KyLuyKe.LuongSPQL, 0);
-            AddMetricRow(dgvTienLuong, "   2.2. Tiền lương chế độ QL", "Đồng", ws.LuongCheDoQL, ws.KyQuy.LuongCheDoQL, ws.KyLuyKe.LuongCheDoQL, 0);
+            AddMetricRow(dgvTienLuong, ws.ManualManagementOther.HasValue?"   2.2. Ngoài SP QL (tổng nhập riêng)":"   2.2. Ngoài SP QL (chế độ/bổ sung)", "Đồng", ws.LuongCheDoQL, ws.KyQuy.LuongCheDoQL, ws.KyLuyKe.LuongCheDoQL, 0);
             AddMetricRow(dgvTienLuong, "   2.3. Điều chỉnh tiền lương QL", "Đồng", ws.DieuChinhLuongQL, ws.KyQuy.DieuChinhLuongQL, ws.KyLuyKe.DieuChinhLuongQL, 0);
             AddMetricRow(dgvTienLuong, "II. TIỀN LƯƠNG BQ TOÀN PX", "1.000đ", ws.TLBinhQuanToanPX, ws.KyQuy.TLBinhQuanToanPX, ws.KyLuyKe.TLBinhQuanToanPX, 2);
             AddMetricRow(dgvTienLuong, "III. THU NHẬP BQ TOÀN PX", "1.000đ", ws.ThuNhapBQToanPX, ws.KyQuy.ThuNhapBQToanPX, ws.KyLuyKe.ThuNhapBQToanPX, 2);
             AddMetricRow(dgvTienLuong, "IV. TIỀN LƯƠNG SP BQ LĐTT", "1.000đ", ws.TLSPBinhQuanLDTT, ws.KyQuy.TLSPBinhQuanLDTT, ws.KyLuyKe.TLSPBinhQuanLDTT, 2);
             AddMetricRow(dgvTienLuong, "V. THU NHẬP BQ LĐTT", "1.000đ", ws.ThuNhapBQLDTT, ws.KyQuy.ThuNhapBQLDTT, ws.KyLuyKe.ThuNhapBQLDTT, 2);
+
 
             dgvAnCaBDDH.Rows.Clear();
             AddMetricRow(dgvAnCaBDDH, "1. Tổng số công Ăn giữa ca", "Công", ws.CongAnCa, ws.KyQuy.CongAnCa, ws.KyLuyKe.CongAnCa, 1);
@@ -1392,6 +1401,16 @@ namespace CiscoLDTLApp
             AddMetricRow(dgvAnCaBDDH, "9. TỔNG TIỀN BỒI DƯỠNG ĐỘC HẠI", "Đồng", ws.TongTienBDDH, ws.KyQuy.TongTienBDDH, ws.KyLuyKe.TongTienBDDH, 0);
 
             foreach(DataGridViewRow row in dgvTienLuong.Rows) row.Cells[2].ReadOnly=ws.MaPX=="CDNL" && ws.Cdnl!=null && ws.Cdnl.Applied;
+            if(dgvTienLuong.Rows.Count>=12) {
+                dgvTienLuong.Rows[8].Cells[2].ReadOnly=true;
+                dgvTienLuong.Rows[8].Cells[2].ToolTipText="Tổng tự tính từ quỹ SP + khoản ngoài SP + điều chỉnh chung. Nhập điều chỉnh tại dòng bên dưới.";
+                dgvTienLuong.Rows[9].Cells[2].ReadOnly=ws.TinhQuyQLTuSanLuong || ws.MaPX=="CDNL" && ws.Cdnl!=null && ws.Cdnl.Applied;
+                dgvTienLuong.Rows[9].Cells[2].ToolTipText=ws.TinhQuyQLTuSanLuong?"Sửa sản lượng/đơn giá trong cửa sổ lương quản lý để đổi quỹ này.":"Quỹ sản phẩm quản lý đã duyệt.";
+                dgvTienLuong.Rows[10].Cells[2].ReadOnly=false;dgvTienLuong.Rows[11].Cells[2].ReadOnly=false;
+                dgvTienLuong.Rows[10].Cells[2].ToolTipText="Nhập tổng ngoài SP đã duyệt sẽ thay tổng tự cộng từ cá nhân; không tự chia lại cho từng người.";
+                dgvTienLuong.Rows[11].Cells[2].ToolTipText="Điều chỉnh chung được cộng/trừ một lần ở tổng quản lý; không tự phân bổ cho cá nhân.";
+            }
+
             _isLoadingUI = prevLoading;
         }
 
@@ -1654,10 +1673,8 @@ namespace CiscoLDTLApp
             }
 
             ws.TuDongCongLuyKe = chkTuDongLuyKe != null ? chkTuDongLuyKe.Checked : true;
-            if (ws.TuDongCongLuyKe)
-            {
-                ws.RecalculateDerived();
-            }
+            // Monthly totals always update; the model itself gates automatic quarter/year rollups.
+            ws.RecalculateDerived();
         }
 
         private void RefreshPreview()

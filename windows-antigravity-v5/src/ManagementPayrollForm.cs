@@ -25,7 +25,7 @@ namespace CiscoLDTLApp
             draft.SanLuongLoai2 = ws.SanLuongLoai2;
             draft.SanLuongLe = ws.SanLuongLe;
             ManagementProductionPayroll.CopySettings(ws, draft);
-            draft.TinhQuyQLTuSanLuong = true;
+            draft.TinhQuyQLTuSanLuong = ws.TinhQuyQLTuSanLuong || ws.DonGiaQLLoai1>0 || ws.DonGiaQLLoai2>0 || ws.LuongSPQL<=0;
             draft.ListNhanVien.Clear();
             foreach (var e in ws.ListNhanVien)
                 if (e.LaQuanLy)
@@ -75,6 +75,7 @@ namespace CiscoLDTLApp
             production.Controls.Add(productionResult,0,4); production.SetColumnSpan(productionResult,4);
             EventHandler updateFund = (s,e) =>
             {
+                if(s is NumericUpDown)draft.TinhQuyQLTuSanLuong=true;
                 draft.DonGiaQLLoai1=(double)price1.Value; draft.DonGiaQLLoai2=(double)price2.Value;
                 ManagementProductionPayroll.UpdateFund(draft);
                 fund.Value=(decimal)draft.LuongSPQL;
@@ -82,15 +83,15 @@ namespace CiscoLDTLApp
                 production.Controls["amount1"].Text=WordReportService.FmtInt(draft.ThanhTienQLLoai1);
                 production.Controls["amount2"].Text=WordReportService.FmtInt(draft.ThanhTienQLLoai2);
                 production.Controls["amountHoliday"].Text=WordReportService.FmtInt(draft.ThanhTienQLLe);
-                productionResult.Text="Tổng quỹ SP quản lý = tiền L1 + tiền L2 + tiền ngày lễ (làm tròn từng dòng đến đồng).";
+                productionResult.Text=draft.TinhQuyQLTuSanLuong?"Tổng quỹ SP quản lý = tiền L1 + tiền L2 + tiền ngày lễ (làm tròn từng dòng đến đồng).":"Chưa cấu hình đơn giá QL: giữ quỹ đã nạp/duyệt. Nhập đơn giá riêng để chuyển sang tính theo sản lượng.";
             };
             price1.ValueChanged += updateFund; price2.ValueChanged += updateFund; updateFund(this,EventArgs.Empty);
-            var note = new Label { Dock = DockStyle.Top, Height = 115, Padding = new Padding(8), Text =
+            var note = new Label { Dock = DockStyle.Top, Height = 135, Padding = new Padding(8), Text =
                 "Nhập đơn giá L1/L2; ngày lễ = 2 × L1. Muốn sửa sản lượng, đóng cửa sổ và sửa tại bảng sản xuất của phân xưởng.\n" +
                 "Chỉ QĐ, PQĐ, KTV, TK theo chức danh; không gồm tổ trưởng, trưởng ca, phó ca.\n" +
                 "Hệ số hưởng = ROUND(ROUND(Công SP × Hệ số / 26; 2) × Xếp loại; 2); A=100%, B=90%, C=80%. Lương SP phân bổ theo hệ số hưởng, làm tròn 100đ.\n" +
                 "Phép = Công phép × Lương BHXH / 26 (tròn 100đ); Học/họp 250.000đ/công; VHTT 300.000đ/công theo quy tắc bảng NT hiện có. Làm lễ và phụ cấp: nhập số tiền đã duyệt.\n" +
-                "Quỹ SP tự tính từ ba dòng sản lượng × đơn giá quản lý; đơn giá này độc lập với đơn giá lao động trực tiếp. Điều chỉnh chung chỉ cộng ở tổng PX, chưa phân bổ cho cá nhân." };
+                "Khi đã cấu hình giá QL, quỹ SP tính từ sản lượng × đơn giá riêng. Chưa có giá QL thì giữ quỹ đã duyệt khi sửa khoản cá nhân. Điều chỉnh chung chỉ cộng ở tổng PX, chưa phân bổ cho cá nhân.\nÁp dụng sẽ lấy tổng ngoài SP từ chi tiết từng người, thay tổng ngoài SP nhập riêng tại bảng tổng hợp." };
             summary = new Label { Dock = DockStyle.Bottom, Height = 82, Padding = new Padding(8), Text = "Nhập số liệu, bấm Tính / xem trước. Chưa áp dụng hoặc ghi Excel." };
             grid = new DataGridView { Dock = DockStyle.Fill, AutoGenerateColumns = false, AllowUserToAddRows = false, AllowUserToDeleteRows = false, RowHeadersVisible = false };
             Add("SDB", "SDB", true); Add("HoTen", "Họ tên", true, 180); Add("ChucDanh", "Chức danh", true, 120);
@@ -132,6 +133,7 @@ namespace CiscoLDTLApp
                     ManagementProductionPayroll.CopySettings(draft, original);
                     original.LuongSPQL = draft.LuongSPQL; original.LuongCheDoQL = draft.LuongCheDoQL;
                     original.DieuChinhLuongQL = draft.DieuChinhLuongQL;
+                    original.ManualManagementOther=null; original.ManualManagementFund=false; original.ManagementSummaryEdited=true;
                     ManagementPayroll.Recalculate(original);
                     DialogResult = DialogResult.OK; Close();
                 }

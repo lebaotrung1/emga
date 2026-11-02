@@ -84,6 +84,12 @@ class CdnlPayrollTests
     }
     static void SpecialCases()
     {
+        var adjusted=Example();adjusted.TinhQuyQLTuSanLuong=true;adjusted.SanLuongLoai1=10;adjusted.DonGiaQLLoai1=10000;adjusted.DieuChinhLuongQL=123456;
+        var extraManager=new EmployeeRecord {ExcelRow=8,HoTen="Quản lý giả",SDB="FAKE900",ChucDanh="QĐ",CongSP=26,HeSoCoDinh=2,XepLoai="A",MucLuongBHXH=5200000,CongLePhep=1,CongHocHop=1,CongVHTT=1,LuongLamLe=321000,PhuCapTien=12000};adjusted.ListNhanVien.Add(extraManager);
+        adjusted.Cdnl.Apply(adjusted);double managerTotal=adjusted.LuongSPQL+adjusted.LuongCheDoQL+123456;
+        Check(adjusted.Cdnl.Last.Cells["NT CĐNL!I421"]==managerTotal && adjusted.TongLuongQL==managerTotal,"CDNL source result and app include management adjustment exactly once");
+        Check(adjusted.Cdnl.Last.Cells["NT CĐNL!I440"]==adjusted.TongLuongToanPX,"CDNL whole-workshop result includes the same approved management adjustment");
+        adjusted.Cdnl.Apply(adjusted);Check(adjusted.TongLuongQL==managerTotal && extraManager.LuongLamLe==321000 && extraManager.PhuCapTien==12000,"Repeated CDNL application neither loses supplements nor adds adjustment again");
         var w=Example(); var b=w.Cdnl.Book;
         var repair=new EmployeeRecord { ExcelRow=68,SDB="FAKE002",HoTen="Nhân sự giả 2",CongSP=26,HeSoHuong=20 };
         w.ListNhanVien.Add(repair); Number(b,"CĐNL","AB68",20); Formula(b,"CĐNL","AJ152","'NT CĐNL'!I356/20"); Formula(b,"CĐNL","AD68","ROUND(AB68*$AJ$152,-2)");

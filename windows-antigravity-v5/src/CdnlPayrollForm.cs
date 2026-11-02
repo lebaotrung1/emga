@@ -17,7 +17,7 @@ namespace CiscoLDTLApp
         {
             if(ws.Cdnl==null) throw new ArgumentException("Nạp Excel có NT CĐNL và CĐNL trước.");
             workshop=ws; draft=ws.Cdnl.Draft();
-            Text="Tính lương CĐNL từng bộ phận — v5.11"; Size=new Size(1320,800); MinimumSize=new Size(1000,650); StartPosition=FormStartPosition.CenterParent;
+            Text="Tính lương CĐNL từng bộ phận — v5.12"; Size=new Size(1320,800); MinimumSize=new Size(1000,650); StartPosition=FormStartPosition.CenterParent;
             Font=new Font("Segoe UI",9);
             var top=new FlowLayoutPanel { Dock=DockStyle.Top,Height=80,Padding=new Padding(8) };
             distribute=new CheckBox { Text="Tính lại lương từng người",Checked=draft.Distribute,AutoSize=true };

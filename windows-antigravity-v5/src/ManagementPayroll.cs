@@ -9,6 +9,11 @@ namespace CiscoLDTLApp
         public static void Copy(EmployeeRecord from, EmployeeRecord to)
         { foreach (var p in typeof(EmployeeRecord).GetProperties()) if (p.CanWrite) p.SetValue(to, p.GetValue(from, null), null); }
 
+        public static bool IsApplied(WorkshopData ws)
+        {if(ws.TinhQuyQLTuSanLuong)return true;foreach(var e in ws.ListNhanVien)if(e.LaQuanLy && e.QuanLyTinhMoi)return true;return false;}
+        internal static bool OwnsSummary(WorkshopData ws)
+        {return IsApplied(ws) || ws.ManagementSummaryEdited || ws.ManualManagementFund || ws.ManualManagementOther.HasValue || ws.DieuChinhLuongQL!=0;}
+
         public static double RoundMoney(double value, double unit)
         { return Math.Round(value / unit, 0, MidpointRounding.AwayFromZero) * unit; }
 
@@ -73,7 +78,7 @@ namespace CiscoLDTLApp
                 e.TongTienLuong = e.LuongSanPham + e.LuongLePhepCD + e.LuongHocVHTT + e.LuongLamLe + e.PhuCapTien;
                 other += e.LuongLePhepCD + e.LuongHocVHTT + e.LuongLamLe + e.PhuCapTien;
             }
-            if (hasManagement) ws.LuongCheDoQL = other;
+            if (hasManagement || ws.ManualManagementOther.HasValue) ws.LuongCheDoQL = ws.ManualManagementOther??other;
         }
 
         public static void Recalculate(WorkshopData ws)

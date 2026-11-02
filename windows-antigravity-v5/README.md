@@ -1,3 +1,18 @@
+# Antigravity v5.12 — bổ sung lương quản lý cập nhật nghiệm thu
+
+Tải [antigravity_v5_12_program_only.zip](antigravity_v5_12_program_only.zip). Đóng ứng dụng, thay EXE/launcher và giữ **Data**, **Templates**. Tiêu đề hiện **v5.12**, EXE **5.12.0.0**. Kiểm tra trên bản sao Excel; nhập/áp dụng lại khoản chưa được lưu ở bản cũ rồi bấm **Lưu Excel**.
+
+- **Sửa từng người**: mở **Tính lương quản lý**, nhập tiền làm lễ, phụ cấp/công/hệ số, bấm **Tính / xem trước → Áp dụng vào bảng nghiệm thu**. Tổng ngoài SP lấy từ chi tiết cá nhân. Chưa cấu hình đơn giá QL thì giữ quỹ đã nạp/duyệt khi chỉ sửa khoản cá nhân; nhập/đổi đơn giá riêng sẽ chuyển sang quỹ theo sản lượng. Không dùng đơn giá lao động trực tiếp.
+- **Bổ sung/giảm trừ chung**: nhập dòng **2.3. Điều chỉnh tiền lương QL** trên bảng tổng hợp hoặc ô điều chỉnh trong cửa sổ quản lý. Khoản chung cộng/trừ một lần ở tổng, không tự phân bổ vào từng người.
+- Dòng **2.2. Ngoài SP QL (chế độ/bổ sung)** nhận **tổng ngoài SP đã duyệt**, thay tổng tự cộng từ cá nhân; đây không phải khoản tăng thêm. Nhập số tăng/giảm riêng ở dòng 2.3. Nếu sau đó áp dụng lại chi tiết trong cửa sổ quản lý, tổng ngoài SP sẽ chuyển lại theo các khoản cá nhân; điều chỉnh chung vẫn giữ.
+- Tổng quản lý là ô tự tính. Quỹ SP theo sản lượng sửa qua đơn giá riêng; bảng tổng hợp không cho ghi đè vào quỹ đang tự tính. Tổng tháng cập nhật ngay cả khi tắt tự động lũy kế quý/năm.
+
+Bản cũ có thể ghi số mới vào bộ nhớ đệm Excel nhưng vẫn giữ công thức lương quản lý cũ, nên tính lại sẽ mất khoản bổ sung. Bản này liên kết các tổng NT và tiền lương cá nhân đã áp dụng với sheet **Luong quan ly v5**. Giữ sheet này cùng các cấu hình trong workbook; thay đổi lương bằng ứng dụng và lưu lại để đồng bộ. Các mẫu NT cũ có nhiều tiểu mục riêng, nên dùng sheet này để kiểm tra đầy đủ chi tiết khoản hiện đang áp dụng.
+
+Đã kiểm tra tổng quản lý/tổng PX bằng tính lại công thức Excel trên cả 5 mẫu, khoản làm lễ/phụ cấp, điều chỉnh dương/âm/0, lưu–mở lặp, dữ liệu nhập ngay ở bảng tổng hợp và giữ công thức dùng chung của lao động trực tiếp. CĐNL giữ các công thức bộ phận riêng; điều chỉnh quản lý có trong cả kết quả tính và tổng, không cộng lại lần hai. Giữ nạp công, nhận diện năm sinh, GNV, cẩu phôi, điểm nguồn và Word triệu đồng một số lẻ. Gói không có dữ liệu người dùng. Kiểm thử Linux/Mono với tham chiếu .NET Framework 4.5, chưa chạy trực tiếp Windows.
+
+---
+
 # Antigravity v5.11 — sửa nạp công về 0 ở mẫu Luyện gang
 
 Tải [antigravity_v5_11_program_only.zip](antigravity_v5_11_program_only.zip). Đóng ứng dụng, thay EXE/launcher và giữ **Data**, **Templates**. Tiêu đề hiện **v5.11**, EXE **5.11.0.0**. Chọn đúng phân xưởng/kỳ tháng, nạp lại file công gốc rồi **Lưu Excel** trên bản sao để kiểm tra. Dữ liệu công đọc sai ở bản cũ được khôi phục bằng cách nạp lại nguồn còn đầy đủ; không tự đoán công đã mất.

@@ -3,6 +3,10 @@ Push-Location $PSScriptRoot
 try {
     & (Join-Path $PSScriptRoot 'Build.ps1')
     $csc = "$env:WINDIR/Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+    & $csc /nologo /target:exe /out:ManagementAcceptanceTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll /reference:System.Windows.Forms.dll tests/ManagementAcceptanceTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Management acceptance test build failed' }
+    & .\ManagementAcceptanceTests.exe (Join-Path $PSScriptRoot 'Data/03.9.2026_NT_T9_TCHC.xlsx')
+    if ($LASTEXITCODE -ne 0) { throw 'Management acceptance tests failed' }
     & $csc /nologo /target:exe /out:TimesheetLayoutTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll tests/TimesheetLayoutTests.cs
     if ($LASTEXITCODE -ne 0) { throw 'Timesheet layout test build failed' }
     & .\TimesheetLayoutTests.exe

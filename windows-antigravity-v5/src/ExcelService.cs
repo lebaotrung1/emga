@@ -688,6 +688,7 @@ namespace CiscoLDTLApp
             using (var zip = new ZipArchive(fs, ZipArchiveMode.Read))
             {
                 LoadAdditionalEmployees(zip, workshops);
+                LoadManagementSummaryInputs(zip,workshops);
                 LoadImportedPoints(zip,workshops);
                 LoadManagementProductionSettings(zip, workshops);
                 LoadCranePayroll(zip, workshops);
@@ -1301,8 +1302,9 @@ namespace CiscoLDTLApp
                 SaveAdditionalEmployees(zip, workshops);
                 SaveManagementProductionSettings(zip, workshops);
                 SaveCranePayroll(zip, workshops);
-                SaveManagementPayrollReport(zip, workshops);
+                var managementLinks=SaveManagementPayrollReport(zip, workshops);
                 SaveCdnlPayroll(zip, workshops);
+                LinkManagementAcceptance(zip,managementLinks);
                 SaveNativeGnv(zip,workshops);
                 SaveImportedPoints(zip,workshops);
                 SaveEditedGnv(zip,workshops);
@@ -1687,28 +1689,39 @@ namespace CiscoLDTLApp
             }
         }
 
-        private static void SaveManagementPayrollReport(ZipArchive zip, List<WorkshopData> workshops)
+        private sealed class ManagementReportLinks
         {
-            bool applied = false;
-            foreach (var ws in workshops) foreach (var e in ws.ListNhanVien) if (e.QuanLyTinhMoi) applied = true;
-            if (!applied) return;
+            internal readonly Dictionary<WorkshopData,int> Units=new Dictionary<WorkshopData,int>();
+            internal readonly Dictionary<EmployeeRecord,int> People=new Dictionary<EmployeeRecord,int>();
+        }
+        private static ManagementReportLinks SaveManagementPayrollReport(ZipArchive zip, List<WorkshopData> workshops)
+        {
+            var links=new ManagementReportLinks();bool applied=false;
+            foreach(var ws in workshops)if(ManagementPayroll.OwnsSummary(ws))applied=true;
+            if(!applied)return links;
             string path = EnsureWorksheet(zip, "Luong quan ly v5", "xl/worksheets/ciscoManagementPayroll.xml");
             var doc = new XmlDocument();
             doc.LoadXml("<worksheet xmlns='" + NsMain + "'><sheetData/></worksheet>");
             SetCellInlineString(doc, "A1", "LƯƠNG QUẢN LÝ PHÂN XƯỞNG — dữ liệu v5; đối chiếu quỹ đã duyệt trước thanh toán", false);
-            string[] headers = { "Phân xưởng", "Tháng/năm", "Quỹ SP", "Đã phân bổ SP", "Chênh làm tròn", "Ngoài SP", "Điều chỉnh chung", "Tổng NT quản lý", "Tổng cá nhân" };
+            string[] headers = { "Phân xưởng", "Tháng/năm", "Quỹ SP", "Đã phân bổ SP", "Chênh làm tròn", "Ngoài SP", "Điều chỉnh chung", "Tổng NT quản lý", "Tổng cá nhân", "MaPX", "NgoaiSP_nhap_rieng", "QuySP_nhap_rieng", "TongHop_da_sua" };
             for (int c=0; c<headers.Length; c++) SetCellInlineString(doc, TimesheetImporter.ColName(c+1) + "2", headers[c], false);
             int row = 3;
             foreach (var ws in workshops)
             {
-                bool has = false; double product = 0, personal = 0;
+                double product = 0, personal = 0;
                 foreach (var e in ws.ListNhanVien) if (e.LaQuanLy)
-                { has |= e.QuanLyTinhMoi; product += e.LuongSanPham; personal += e.TongTienLuong; }
-                if (!has) continue;
+                { product += e.LuongSanPham; personal += e.TongTienLuong; }
+                if (!ManagementPayroll.OwnsSummary(ws)) continue;
+                links.Units[ws]=row;
+                SetCellInlineString(doc,"J"+row,ws.MaPX,false);
+                SetCellInlineString(doc,"K"+row,ws.ManualManagementOther.HasValue?"True":"False",false);
+                SetCellInlineString(doc,"L"+row,ws.ManualManagementFund?"True":"False",false);
+                SetCellInlineString(doc,"M"+row,ws.ManagementSummaryEdited?"True":"False",false);
                 SetCellInlineString(doc, "A" + row, ws.TenPX, false);
                 SetCellInlineString(doc, "B" + row, ws.Thang + "/" + ws.Nam, false);
                 double[] values = { ws.LuongSPQL, product, ws.LuongSPQL-product, ws.LuongCheDoQL, ws.DieuChinhLuongQL, ws.TongLuongQL, personal };
-                for (int c=0; c<values.Length; c++) SetCellNumeric(doc, TimesheetImporter.ColName(c+3) + row, values[c], false);
+                for (int c=0; c<values.Length; c++) SetCellNumeric(doc, TimesheetImporter.ColName(c+3) + row, PayrollFormulaBook.Finite(values[c]), false);
+                SetCraneFormula(doc,"H"+row,"C"+row+"+F"+row+"+G"+row,ws.TongLuongQL);
                 row++;
             }
             row += 2;
@@ -1717,16 +1730,75 @@ namespace CiscoLDTLApp
             row++;
             foreach (var ws in workshops) foreach (var e in ws.ListNhanVien)
             {
-                if (!e.LaQuanLy || !e.QuanLyTinhMoi) continue;
+                if (!e.LaQuanLy || !ManagementPayroll.IsApplied(ws)) continue;
+                links.People[e]=row;
                 string[] text = { ws.TenPX, e.SDB, e.HoTen, e.ChucDanh };
                 for (int c=0; c<text.Length; c++) SetCellInlineString(doc, TimesheetImporter.ColName(c+1) + row, text[c] ?? "", false);
                 SetCellNumeric(doc, "E"+row, e.CongSP, false); SetCellNumeric(doc, "F"+row, e.HeSoCoDinh, false);
                 SetCellInlineString(doc, "G"+row, e.XepLoai, false);
                 double[] values = { e.HeSoHuong, e.LuongSanPham, e.LuongLePhepCD, e.LuongHocVHTT, e.LuongLamLe, e.PhuCapTien, e.TongTienLuong };
-                for (int c=0; c<values.Length; c++) SetCellNumeric(doc, TimesheetImporter.ColName(c+8) + row, values[c], false);
+                for (int c=0; c<values.Length; c++) SetCellNumeric(doc, TimesheetImporter.ColName(c+8) + row, PayrollFormulaBook.Finite(values[c]), false);
                 row++;
             }
             SaveSheetXml(zip, path, doc);
+            return links;
+        }
+
+        private static void LoadManagementSummaryInputs(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip);string path;if(!map.TryGetValue("Luong quan ly v5",out path))return;
+            var doc=LoadSheetXml(zip,path);var strings=LoadSharedStrings(zip);if(GetCellString(doc,strings,"J2")!="MaPX")return;
+            foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)) {
+                int r;if(!int.TryParse(row.GetAttribute("r"),out r)||r<3)continue;
+                string unit=GetCellString(doc,strings,"J"+r);
+                foreach(var ws in workshops)if(ws.MaPX==unit) {
+                    ws.ManagementSummaryEdited=GetCellString(doc,strings,"M"+r)=="True";
+                    ws.ManualManagementFund=GetCellString(doc,strings,"L"+r)=="True";
+                    ws.ManualManagementOther=GetCellString(doc,strings,"K"+r)=="True"?(double?)GetCellDouble(doc,strings,"F"+r,0):null;
+                    ws.LuongSPQL=GetCellDouble(doc,strings,"C"+r,ws.LuongSPQL);
+                    ws.LuongCheDoQL=GetCellDouble(doc,strings,"F"+r,ws.LuongCheDoQL);
+                    ws.DieuChinhLuongQL=GetCellDouble(doc,strings,"G"+r,0);ws.RecalculateDerived();
+                }
+            }
+        }
+        private static void MaterializePayrollShared(XmlDocument doc,string sheet,PayrollFormulaBook book)
+        {
+            foreach(XmlElement cell in doc.GetElementsByTagName("c",NsMain)) {
+                var f=FindChild(cell,"f") as XmlElement;if(f==null || f.GetAttribute("t")!="shared")continue;
+                PayrollCell source;
+                if(!book.Cells.TryGetValue(PayrollFormulaBook.Key(sheet,cell.GetAttribute("r")),out source))book.Cells.TryGetValue(PayrollFormulaBook.Key(sheet.Trim(),cell.GetAttribute("r")),out source);
+                if(source==null || string.IsNullOrEmpty(source.Formula) || source.Formula=="#SHARED!")throw new ArgumentException("Không xác định được công thức dùng chung "+sheet+"!"+cell.GetAttribute("r")+". Chưa lưu để tránh làm hỏng công thức.");
+                f.RemoveAll();f.InnerText=source.Formula;
+            }
+        }
+        private static void LinkManagementAcceptance(ZipArchive zip,ManagementReportLinks links)
+        {
+            if(links.Units.Count==0)return;
+            var map=GetSheetMap(zip);var formulaBook=PayrollFormulaBook.Load(zip);
+            foreach(var p in links.Units) {
+                var ws=p.Key;string path;if(!TryGetGnvSheet(map,ws,out path))throw new ArgumentException("Không tìm thấy bảng nghiệm thu "+ws.SheetNT+" để cập nhật lương quản lý. Chưa lưu Excel.");
+                string product=ws.MaPX=="TK"?"J96":ws.MaPX=="LG"?"J109":ws.MaPX=="LT"?"J103":ws.MaPX=="CDNL"?"I422":"J107";
+                string other=ws.MaPX=="TK"?"J114":ws.MaPX=="LG"?"J140":ws.MaPX=="LT"?"J130":ws.MaPX=="CDNL"?"I432":"J128";
+                string total=ws.MaPX=="TK"?"J95":ws.MaPX=="LG"?"J108":ws.MaPX=="LT"?"J102":ws.MaPX=="CDNL"?"I421":"J106";
+                var doc=LoadSheetXml(zip,path);MaterializePayrollShared(doc,ws.SheetNT,formulaBook);string source="'Luong quan ly v5'!";string r=p.Value.ToString();
+                if(ManagementPayroll.IsApplied(ws) || ws.ManualManagementFund)SetCraneFormula(doc,product,source+"C"+r,ws.LuongSPQL);
+                if(ManagementPayroll.IsApplied(ws) || ws.ManualManagementOther.HasValue)SetCraneFormula(doc,other,source+"F"+r,ws.LuongCheDoQL);
+                SetCraneFormula(doc,total,source+"C"+r+"+"+source+"F"+r+"+"+source+"G"+r,ws.TongLuongQL);
+                SaveSheetXml(zip,path,doc);
+                string empPath;if(!map.TryGetValue(ws.SheetBangCong,out empPath))continue;
+                var empDoc=LoadSheetXml(zip,empPath);MaterializePayrollShared(empDoc,ws.SheetBangCong,formulaBook);bool cdnl=ws.MaPX=="CDNL";
+                foreach(var e in ws.ListNhanVien) {
+                    int detail;if(!links.People.TryGetValue(e,out detail)||e.ExcelRow<=0)continue;string er=e.ExcelRow.ToString(),dr=detail.ToString();
+                    string[] targets=cdnl?new[] {"AB","AD","AE","AJ","AI","AL","AC"}:new[] {"Z","AB","AD","AI","AH","AK","AA"};
+                    string[] columns={"H","I","J","K","L","M","N"};double[] values={e.HeSoHuong,e.LuongSanPham,e.LuongLePhepCD,e.LuongHocVHTT,e.LuongLamLe,e.PhuCapTien,e.TongTienLuong};
+                    for(int c=0;c<targets.Length;c++)SetCraneFormula(empDoc,targets[c]+er,source+columns[c]+dr,values[c]);
+                    if(!cdnl)SetCraneFormula(empDoc,"Y"+er,source+"H"+dr,e.HeSoHuong);
+                    else SetCellNumeric(empDoc,"AK"+er,0,false);
+                    SetCellNumeric(empDoc,"I"+er,e.HeSoCoDinh,false);SetCellNumeric(empDoc,"G"+er,e.MucLuongBHXH,false);SetCellNumeric(empDoc,"H"+er,e.PhuCapChucVu,false);
+                    SetCellInlineString(empDoc,(cdnl?"Z":"X")+er,e.XepLoai,false);
+                }
+                SaveSheetXml(zip,empPath,empDoc);
+            }
         }
 
         private static void LoadAdditionalEmployees(ZipArchive zip, List<WorkshopData> workshops)

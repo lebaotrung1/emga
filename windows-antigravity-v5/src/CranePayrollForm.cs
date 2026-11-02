@@ -10,7 +10,7 @@ namespace CiscoLDTLApp
         private readonly DataGridView grid;
         public CranePayrollForm(WorkshopData ws)
         {
-            workshop=ws; Text="Lương cẩu phôi PX Thép — v5.11"; Size=new Size(1100,420); StartPosition=FormStartPosition.CenterParent;
+            workshop=ws; Text="Lương cẩu phôi PX Thép — v5.12"; Size=new Size(1100,420); StartPosition=FormStartPosition.CenterParent;
             var note=new Label { Dock=DockStyle.Top,Height=65,Text="Nhập SL thường KHÔNG bao gồm SL lễ. Tiền = SL thường × ĐG + SL lễ × ĐG × 2.\nÁp dụng sẽ THAY phần cẩu phôi cũ trong quỹ SP (không cộng thêm). Giữ riêng các khoản cẩu phôi khác từ Excel. Đối chiếu tổng quỹ cũ: "+WordReportService.FmtInt(ws.SanLuongPhuTT)+" đồng. Bấm Lưu Excel sau khi áp dụng." };
             grid=new DataGridView { Dock=DockStyle.Fill,AllowUserToAddRows=false,AllowUserToDeleteRows=false,AutoSizeColumnsMode=DataGridViewAutoSizeColumnsMode.Fill };
             foreach(string title in new[] {"Công đoạn","SL thường (không gồm lễ)","SL lễ","Đơn giá (đồng/ĐVT)","Thành tiền (đồng)"}) grid.Columns.Add(title,title);

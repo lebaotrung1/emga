@@ -127,12 +127,14 @@ namespace CiscoLDTLApp
             EmployeeClassification.Apply(ws);
             Bind(ws); var result=new CdnlResult();
             WorkshopData management=null;
-            if(ws.TinhQuyQLTuSanLuong) {
+            if(ManagementPayroll.IsApplied(ws)) {
                 management=new WorkshopData { MaPX="CDNL",LuongSPQL=ws.LuongSPQL,DieuChinhLuongQL=ws.DieuChinhLuongQL,SanLuongLoai1=ws.SanLuongLoai1,SanLuongLoai2=ws.SanLuongLoai2,SanLuongLe=ws.SanLuongLe };
                 ManagementProductionPayroll.CopySettings(ws,management);
+                management.ManualManagementOther=ws.ManualManagementOther;
                 foreach(var e in ws.ListNhanVien) if(e.LaQuanLy) { var copy=new EmployeeRecord(); ManagementPayroll.Copy(e,copy); copy.QuanLyTinhMoi=true; management.ListNhanVien.Add(copy); result.Employees[e]=copy; }
                 ManagementPayroll.Validate(management); ManagementPayroll.Calculate(management,true);
                 Book.Set("NT CĐNL","I422",management.LuongSPQL); Book.Set("NT CĐNL","I432",management.LuongCheDoQL);
+                Book.Set("NT CĐNL","I421",management.LuongSPQL+management.LuongCheDoQL+ws.DieuChinhLuongQL);
                 foreach(var pair in result.Employees) { string row=pair.Key.ExcelRow.ToString(); if(pair.Key.ExcelRow<=0) continue; var e=pair.Value;
                     Book.Set("CĐNL","AB"+row,e.HeSoHuong); Book.Set("CĐNL","AD"+row,e.LuongSanPham); Book.Set("CĐNL","AE"+row,e.LuongLePhepCD); Book.Set("CĐNL","AI"+row,e.LuongLamLe); Book.Set("CĐNL","AJ"+row,e.LuongHocVHTT); Book.Set("CĐNL","AK"+row,0); Book.Set("CĐNL","AL"+row,e.PhuCapTien); Book.Set("CĐNL","AC"+row,e.TongTienLuong);
                 }
@@ -172,6 +174,11 @@ namespace CiscoLDTLApp
                 if(result.EvaluationErrors>rowErrors) result.InvalidEmployees.Add(e);
             }
             // Roots use the exact NT formulas, including deductions and auxiliary work once.
+            if(management==null && ManagementPayroll.OwnsSummary(ws)) {
+                if(ws.ManualManagementFund)Book.Set("NT CĐNL","I422",ws.LuongSPQL);
+                if(ws.ManualManagementOther.HasValue)Book.Set("NT CĐNL","I432",ws.ManualManagementOther.Value);
+                Book.Set("NT CĐNL","I421",Eval(result,"NT CĐNL","I422")+Eval(result,"NT CĐNL","I432")+ws.DieuChinhLuongQL);
+            }
             foreach(string cell in new[] {"I43","I416","I418","I419","I420","I417","I432","I42","I421","I440"}) result.Cells["NT CĐNL!"+cell]=Eval(result,"NT CĐNL",cell);
             foreach(var p in Book.Results) result.Cells[p.Key]=p.Value;
             foreach(var p in Book.Values) result.Cells[p.Key]=p.Value;
@@ -184,7 +191,7 @@ namespace CiscoLDTLApp
         {
             var result=Preview(ws);
             if(!result.Valid) throw new ArgumentException("Chưa áp dụng: "+string.Join("\n",new List<string>(result.Errors.Values).ToArray()));
-            if(ws.TinhQuyQLTuSanLuong) {
+            if(ManagementPayroll.IsApplied(ws)) {
                 KeepSource("NT CĐNL!I422"); KeepSource("NT CĐNL!I432");
                 foreach(var e in ws.ListNhanVien) if(e.LaQuanLy && e.ExcelRow>0) foreach(string col in new[] {"AB","AD","AE","AI","AJ","AK","AL","AC"}) KeepSource("CĐNL!"+col+e.ExcelRow);
             }
@@ -211,7 +218,7 @@ namespace CiscoLDTLApp
             ws.LuongLePhepTT=Last.Cells["NT CĐNL!I418"]; ws.LuongVHTTTT=Last.Cells["NT CĐNL!I419"]; ws.LuongHocHopTT=Last.Cells["NT CĐNL!I420"];
             ws.LuongCheDoTT=Last.Cells["NT CĐNL!I417"];
             ws.LuongSPQL=Last.Groups["I422"]; ws.LuongCheDoQL=Last.Cells["NT CĐNL!I432"];
-            ws.TongLuongTT=Last.Cells["NT CĐNL!I42"]; ws.TongLuongQL=Last.Cells["NT CĐNL!I421"]+(ws.TinhQuyQLTuSanLuong?ws.DieuChinhLuongQL:0);
+            ws.TongLuongTT=Last.Cells["NT CĐNL!I42"]; ws.TongLuongQL=Last.Cells["NT CĐNL!I421"];
             ws.TongLuongToanPX=ws.TongLuongTT+ws.TongLuongQL;
         }
         public static void EnsureCurrent(WorkshopData ws) { if(ws.Cdnl!=null && ws.Cdnl.Applied) { if(!ws.Cdnl.Recalculate(ws)) throw new ArgumentException(ws.Cdnl.Status); ws.RecalculateDerived(); } }

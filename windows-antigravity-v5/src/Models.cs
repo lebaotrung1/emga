@@ -223,6 +223,8 @@ namespace CiscoLDTLApp
 
     public class WorkshopData
     {
+        internal bool ManagementSummaryEdited, ManualManagementFund;
+        internal double? ManualManagementOther;
         public string MaPX { get; set; }              // TK, LG, LT, CDNL, KT
         public string SheetNT { get; set; }           // NT thiêu kết, NT gang, NT Thép, NT CĐNL, NT. K. tuyển
         public string Sheet9Thang { get; set; }       // 9 tháng Thiêu kết, ...
@@ -800,6 +802,7 @@ namespace CiscoLDTLApp
 
             LuongCheDoTT = LuongLePhepTT + LuongHocHopTT + LuongVHTTTT;
             TongLuongTT = LuongSPTT + LuongCVKhac + LuongCheDoTT + LuongTDT + TruLuong;
+            if(ManualManagementOther.HasValue)LuongCheDoQL=ManualManagementOther.Value;
             TongLuongQL = LuongSPQL + LuongCheDoQL + DieuChinhLuongQL;
             TongLuongToanPX = TongLuongTT + TongLuongQL;
 

@@ -1,3 +1,13 @@
+# v5.12 — tổng quản lý và khoản bổ sung được ghi bền vào nghiệm thu
+
+- `ManagementAcceptanceTests`: 161 kiểm tra dữ liệu giả cho 5 PX, 172 khi thêm giao diện, 306 khi thêm bản sao Excel nguồn. Kiểm tra trực tiếp công thức NT/thu nhập cá nhân/tổng PX sau tính lại, sửa làm lễ/phụ cấp/delta về 0, điều chỉnh âm, ba vòng lưu–mở, giữ công thức dùng chung của dòng trực tiếp khi thay ô neo quản lý. Giao diện kiểm tra nhập tổng ngoài SP, quỹ duyệt và delta không cần áp dụng cửa sổ trước, tổng tháng đổi cả khi tắt lũy kế tự động; áp dụng chi tiết thay tổng ngoài SP riêng nhưng giữ quỹ duyệt chưa có đơn giá và delta.
+- Bản sao nguồn dùng khoản tiền giả để cô lập luồng cập nhật, không phải kết quả thanh toán được duyệt. Tệp nguồn gốc giữ nguyên SHA-256; tên/mã/dữ liệu người dùng không đưa vào mã kiểm thử hoặc gói.
+- `CdnlPayrollTests`: thêm kiểm tra I421/I440 và tổng ứng dụng cùng nhận delta đúng một lần, lặp áp dụng giữ tiền làm lễ/phụ cấp. Giữ các công thức quỹ trực tiếp theo nguồn, không chuyển chúng sang công thức quản lý chung.
+- `Luong quan ly v5` có mã PX và trạng thái nhập tổng để khôi phục các khoản tại bảng tổng hợp; tổng NT tham chiếu kết quả này, không còn quay về công thức cũ khi Excel tính lại. Công thức chung được mở rộng đầy đủ trước khi thay ô neo để không làm hỏng các dòng trực tiếp còn dùng chung công thức.
+- Script PowerShell đã thêm bài kiểm tra nghiệm thu quản lý. Tiếp tục chạy các kiểm thử nạp công/điểm/năm sinh, phân loại và giữ công, GNV, cẩu phôi, quỹ/Word và CĐNL. Biên dịch Microsoft .NET Framework 4.5, chạy Linux/Mono; chưa xác nhận trực tiếp Windows.
+
+---
+
 # v5.11 — nhận diện cột, không dùng thiếu cột làm công bằng 0
 
 - `TimesheetLayoutTests` tái tạo tiêu đề gộp ô của mẫu Luyện gang: AJ công làm việc, AR tổng ngày lịch; tổng điểm/điểm chia lương; điểm chia lương đã xếp loại không bị nhân lại; điểm và công số 0 được lưu đúng, gồm điểm ở Tổng hợp công. Kiểm tra thiếu cột ở sheet sau không làm sheet trước được nạp dở, ô công lỗi giữ công đang có và báo nguồn.
