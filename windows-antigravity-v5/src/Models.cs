@@ -62,6 +62,7 @@ namespace CiscoLDTLApp
         internal bool AttendanceEdited;
         internal string LoadedRole;
         internal int MasterRowHint;
+        internal ImportedPointValues ImportedPoints;
         public int STT { get; set; }
         public int ExcelRow { get; set; }           // Dòng trong sheet phân xưởng ('T kết', 'Gang', 'thép', 'CĐNL', 'K. tuyển')
         public int TongHopCongRow { get; set; }     // Dòng trong sheet 'Tổng hợp công'
@@ -452,10 +453,8 @@ namespace CiscoLDTLApp
                 else
                 {
                     countTT++;
-                    if (emp.DiemSanXuat > 0)
-                    {
-                        emp.HeSoHuong = Math.Round(emp.DiemSanXuat * rateXL, 2);
-                    }
+                    if(emp.ImportedPoints!=null && emp.ImportedPoints.Matches(emp)) {emp.DiemSanXuat=emp.ImportedPoints.Production;emp.HeSoHuong=emp.ImportedPoints.Weight;}
+                    else if (emp.DiemSanXuat > 0)emp.HeSoHuong = Math.Round(emp.DiemSanXuat * rateXL, 2);
                     sumDiemTT += emp.HeSoHuong;
                 }
 

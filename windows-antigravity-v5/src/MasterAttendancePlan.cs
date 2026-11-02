@@ -100,7 +100,7 @@ namespace CiscoLDTLApp
                 ExcelService.SetCellNumeric(doc,"R"+r,e.CongHocHop+e.CongVHTT+e.CongLePhep+extra);
                 ExcelService.SetCellNumeric(doc,"T"+r,e.CongBHXH);
                 if(e.CoBangCong) ExcelService.SetCellNumeric(doc,"S"+r,e.CongK3);
-                if(e.DiemSanXuat>0 || e.QuanLyTinhMoi) ExcelService.SetCellNumeric(doc,"U"+r,e.DiemSanXuat);
+                if(e.DiemSanXuat>0 || e.QuanLyTinhMoi || e.ImportedPoints!=null) ExcelService.SetCellNumeric(doc,"U"+r,e.DiemSanXuat);
                 ExcelService.SetCellNumeric(doc,"W"+r,e.LuongSanPham); ExcelService.SetCellNumeric(doc,"AB"+r,e.LuongLePhepCD);
                 ExcelService.SetCellNumeric(doc,"AF"+r,e.CongAnCa);
             }

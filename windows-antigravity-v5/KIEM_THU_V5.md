@@ -1,3 +1,12 @@
+# v5.11 — nhận diện cột, không dùng thiếu cột làm công bằng 0
+
+- `TimesheetLayoutTests` tái tạo tiêu đề gộp ô của mẫu Luyện gang: AJ công làm việc, AR tổng ngày lịch; tổng điểm/điểm chia lương; điểm chia lương đã xếp loại không bị nhân lại; điểm và công số 0 được lưu đúng, gồm điểm ở Tổng hợp công. Kiểm tra thiếu cột ở sheet sau không làm sheet trước được nạp dở, ô công lỗi giữ công đang có và báo nguồn.
+- Đối chiếu trực tiếp file được tải lên qua đối số tùy chọn, tạo danh sách kiểm thử từ danh tính nguồn để cô lập lỗi đọc cột, so từng trường công/học/VHTT/phép/BHXH/K3, ăn ca nhà ăn/tiền mặt, M1/M2/M3, điểm sản xuất/chia lương. Tạo workbook tổng hợp tạm để thử hai vòng lưu–mở và tính lại. Không thay tệp nguồn hoặc mang tên/mã người dùng vào mã kiểm thử.
+- Lệnh: `TimesheetLayoutTests.exe` dùng dữ liệu giả; `TimesheetLayoutTests.exe <file-cong-Luyen-gang.xlsx>` kiểm tra thêm mẫu thực. Script PowerShell đã thêm phần dữ liệu giả. Nguồn điểm dùng sheet riêng, không thêm public property làm lệch cột snapshot/quỹ quản lý của các bản trước.
+- Giữ các kiểm thử tên/năm sinh, Framework/BDĐH, nạp hồ sơ, phân loại và giữ công, quản lý/quỹ/Word, GNV, cẩu phôi và CĐNL. Chạy Linux/Mono, chưa xác nhận trực tiếp Windows.
+
+---
+
 # v5.10 — nhận diện năm sinh, giữ đúng Tên + SDB
 
 - `ImportNameMatchingTests`: 51 kiểm tra dữ liệu giả cho bốn loại sheet (công, ăn ca, BDĐH, điểm), năm sinh trong ngoặc hai chiều, khoảng trắng/NBSP/Unicode tổ hợp, SDB có số 0 đầu, không đổi tên/mã hồ sơ, không tạo người trùng, nạp lặp và các dòng công tách hợp lệ.

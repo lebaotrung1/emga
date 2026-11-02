@@ -1,3 +1,17 @@
+# Antigravity v5.11 — sửa nạp công về 0 ở mẫu Luyện gang
+
+Tải [antigravity_v5_11_program_only.zip](antigravity_v5_11_program_only.zip). Đóng ứng dụng, thay EXE/launcher và giữ **Data**, **Templates**. Tiêu đề hiện **v5.11**, EXE **5.11.0.0**. Chọn đúng phân xưởng/kỳ tháng, nạp lại file công gốc rồi **Lưu Excel** trên bản sao để kiểm tra. Dữ liệu công đọc sai ở bản cũ được khôi phục bằng cách nạp lại nguồn còn đầy đủ; không tự đoán công đã mất.
+
+Mẫu Luyện gang dùng cột **AJ “Tổng công”** trong phần “Quy ra công” cho công làm việc, thay tên “Số công sản phẩm”. Bản cũ không xác định được cột này nhưng vẫn nạp giá trị 0. Bản mới nhận đúng cột, giữ riêng học/họp, VHTT, phép, BHXH, K3; cột tổng ngày lịch không bị coi là công sản phẩm. Nhận các tên **“Tổng điểm” / “Tổng điểm chia lương”**, đúng vùng ngày ở tiêu đề gộp ô và tên tổng BDĐH khác nhau. Chú giải mức độc hại dưới cuối bảng không được coi là nhân sự mới.
+
+Nếu chưa nhận diện được cột công/điểm bắt buộc, chương trình báo trước khi nạp để giữ nguyên dữ liệu. Ô công thiếu giá trị số hoặc có lỗi được báo kèm địa chỉ, giữ công đang có của người đó; số **0 hợp lệ** vẫn được nạp để xóa công cũ.
+
+Điểm chia lương trực tiếp đã có trong file được giữ theo nguồn, không nhân lại xếp loại chung. Sheet **Diem nap v5** giữ dữ liệu này qua lưu–mở và tính lại, bao gồm điểm bằng 0. Giữ sheet này cùng các sheet cấu hình khác. Muốn thay điểm đã nạp, sửa/nạp lại bằng ứng dụng để đồng bộ; chỉ sửa ô điểm trong Excel có thể bị dữ liệu đã lưu ưu tiên khi mở ứng dụng. Công thức quản lý và bộ tính CĐNL vẫn theo chế độ riêng; lựa chọn ăn ca Công thức/Đơn vị/Thủ công được giữ.
+
+Đã đối chiếu file công thực tế theo từng người và từng trường, nạp lặp, chuyển sang bản Excel tổng hợp tạm rồi lưu–mở hai vòng; kiểm tra công và điểm không trở về số cũ/0. Dữ liệu thật chỉ dùng trong bản tạm ngoài repo, không coi bài kiểm thử là kết quả lương được duyệt. Giữ các sửa đổi tên có năm sinh, quản lý, GNV cả 5 PX, cẩu phôi, CĐNL và Word. Gói không có Excel/ảnh/dữ liệu người dùng. Kiểm thử Linux/Mono với tham chiếu .NET Framework 4.5, chưa chạy trực tiếp Windows.
+
+---
+
 # Antigravity v5.10 — nhận diện tên có năm sinh khi nạp công
 
 Tải [antigravity_v5_10_program_only.zip](antigravity_v5_10_program_only.zip). Đóng ứng dụng, thay EXE/launcher, giữ **Data** và **Templates**. Tiêu đề hiện **v5.10**, EXE **5.10.0.0**. Chọn đúng PX, nạp lại bảng công/ăn ca/BDĐH/điểm rồi **Lưu Excel** trên bản sao để kiểm tra.

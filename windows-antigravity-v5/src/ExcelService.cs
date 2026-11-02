@@ -688,6 +688,7 @@ namespace CiscoLDTLApp
             using (var zip = new ZipArchive(fs, ZipArchiveMode.Read))
             {
                 LoadAdditionalEmployees(zip, workshops);
+                LoadImportedPoints(zip,workshops);
                 LoadManagementProductionSettings(zip, workshops);
                 LoadCranePayroll(zip, workshops);
                 LoadEditedGnv(zip, workshops);
@@ -1303,6 +1304,7 @@ namespace CiscoLDTLApp
                 SaveManagementPayrollReport(zip, workshops);
                 SaveCdnlPayroll(zip, workshops);
                 SaveNativeGnv(zip,workshops);
+                SaveImportedPoints(zip,workshops);
                 SaveEditedGnv(zip,workshops);
                 if(thcPath!=null) { thcDoc=LoadSheetXml(zip,thcPath); masterPlan.Write(thcDoc,LoadSharedStrings(zip)); SaveSheetXml(zip,thcPath,thcDoc); }
                 SaveRoleSummaries(zip,workshops);
@@ -2129,6 +2131,47 @@ namespace CiscoLDTLApp
                 }
                 SaveSheetXml(zip,path,doc);
             }
+        }
+
+        private const string ImportedPointsSheet="Diem nap v5";
+        private static void LoadImportedPoints(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip);string path;if(!map.TryGetValue(ImportedPointsSheet,out path))return;
+            var doc=LoadSheetXml(zip,path);var strings=LoadSharedStrings(zip);
+            foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)) {
+                int r;if(!int.TryParse(row.GetAttribute("r"),out r)||r<2)continue;
+                string code=GetCellString(doc,strings,"A"+r),identity=MasterAttendancePlan.Identity(GetCellString(doc,strings,"C"+r),GetCellString(doc,strings,"D"+r));
+                int sourceRow=(int)GetCellDouble(doc,strings,"B"+r,-1);
+                foreach(var ws in workshops) if(ws.MaPX==code && ws.MaPX!="CDNL") foreach(var e in ws.ListNhanVien)
+                    if(!e.LaQuanLy && e.ExcelRow==sourceRow && MasterAttendancePlan.Identity(e.SDB,e.HoTen)==identity) {
+                        e.DiemSanXuat=GetCellDouble(doc,strings,"E"+r,0);e.HeSoHuong=GetCellDouble(doc,strings,"G"+r,0);e.XepLoai=GetCellString(doc,strings,"F"+r);
+                        e.ImportedPoints=new ImportedPointValues(e);
+                    }
+            }
+        }
+        private static void SaveImportedPoints(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            var map=GetSheetMap(zip);bool any=false;
+            foreach(var ws in workshops) foreach(var e in ws.ListNhanVien) if(e.ImportedPoints!=null)any=true;
+            if(!any && !map.ContainsKey(ImportedPointsSheet))return;
+            var data=NewSheetDocument();string[] headers={"MaPX","Dong","SDB","HoTen","DiemSanXuat","XepLoai","DiemChiaLuong"};
+            for(int c=0;c<headers.Length;c++)SetCellInlineString(data,TimesheetImporter.ColName(c+1)+"1",headers[c],false);
+            int row=2;
+            foreach(var ws in workshops) {
+                if(ws.MaPX=="CDNL")continue;XmlDocument employeeDoc=null;string employeePath=null;
+                foreach(var e in ws.ListNhanVien) if(!e.LaQuanLy && e.ImportedPoints!=null) {
+                    if(e.ExcelRow>0 && map.TryGetValue(ws.SheetBangCong,out employeePath)) {
+                        if(employeeDoc==null)employeeDoc=LoadSheetXml(zip,employeePath);
+                        SetCellNumeric(employeeDoc,"W"+e.ExcelRow,e.DiemSanXuat,false);SetCellNumeric(employeeDoc,"Y"+e.ExcelRow,e.HeSoHuong,false);SetCellNumeric(employeeDoc,"Z"+e.ExcelRow,e.HeSoHuong,false);
+                        SetCellInlineString(employeeDoc,"X"+e.ExcelRow,e.XepLoai,false);
+                    }
+                    if(!e.ImportedPoints.Matches(e))continue;
+                    SetCellInlineString(data,"A"+row,ws.MaPX,false);SetCellNumeric(data,"B"+row,e.ExcelRow,false);SetCellInlineString(data,"C"+row,e.SDB,false);SetCellInlineString(data,"D"+row,e.HoTen,false);
+                    SetCellNumeric(data,"E"+row,e.DiemSanXuat,false);SetCellInlineString(data,"F"+row,e.XepLoai,false);SetCellNumeric(data,"G"+row,e.HeSoHuong,false);row++;
+                }
+                if(employeeDoc!=null)SaveSheetXml(zip,employeePath,employeeDoc);
+            }
+            SaveSheetXml(zip,EnsureWorksheet(zip,ImportedPointsSheet,"xl/worksheets/ciscoImportedPoints.xml"),data);
         }
 
         private static void SaveSheetXml(ZipArchive zip, string entryPath, XmlDocument doc)

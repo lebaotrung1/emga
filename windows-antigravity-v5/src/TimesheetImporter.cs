@@ -114,6 +114,27 @@ namespace CiscoLDTLApp
             return Regex.Replace(sb.ToString().ToLowerInvariant(), @"\s+", " ");
         }
 
+        private static bool ExactHeader(XmlDocument doc,List<string> strings,int col,int row,string text)
+        {for(int r=Math.Max(1,row-1);r<=row+2;r++)if(NormName(Cell(doc,strings,col,r))==text)return true;return false;}
+        private static int ColumnNumber(string text)
+        {int result=0;foreach(char c in text)result=result*26+c-'A'+1;return result;}
+        private static int MergedDayEnd(XmlDocument doc,Layout layout)
+        {
+            foreach(XmlElement merge in doc.GetElementsByTagName("mergeCell","http://schemas.openxmlformats.org/spreadsheetml/2006/main")) {
+                var m=Regex.Match(merge.GetAttribute("ref"),@"^([A-Z]+)(\d+):([A-Z]+)(\d+)$");if(!m.Success)continue;
+                int a=ColumnNumber(m.Groups[1].Value),b=ColumnNumber(m.Groups[3].Value),r=int.Parse(m.Groups[2].Value);
+                if(a==layout.DayStart && b-a>=27 && b-a<=30 && r>=layout.HeaderRow && r<=layout.HeaderRow+2)return b;
+            }
+            return 0;
+        }
+        private static void ValidateLayout(Layout layout,string sheet)
+        {
+            if(layout.Kind==SheetKind.Cong && layout.CSP<=0)
+                throw new ArgumentException("Sheet '"+sheet+"': chưa xác định được cột công sản phẩm/làm việc. Chưa nạp để giữ nguyên công đang có; cần kiểm tra tiêu đề cột.");
+            if(layout.Kind==SheetKind.Diem && layout.CDiemSX<=0)
+                throw new ArgumentException("Sheet '"+sheet+"': chưa xác định được cột tổng điểm. Chưa nạp để tránh ghi dữ liệu sai.");
+        }
+
         private static Layout Detect(XmlDocument d, List<string> ss)
         {
             var sbTitle = new StringBuilder();
@@ -146,7 +167,7 @@ namespace CiscoLDTLApp
             if (lay.SdbCol == 0) lay.SdbCol = lay.NameCol + 1;
             lay.DayStart = lay.SdbCol + 2;
 
-            int firstSummary = 200;
+            int firstSummary = 200, genericWork=0, genericPoints=0;
             for (int c = lay.DayStart; c <= 90; c++)
             {
                 string h = HeaderText(d, ss, c, lay.HeaderRow);
@@ -160,24 +181,32 @@ namespace CiscoLDTLApp
                         if (h.Contains("hưởng 100% lương") && lay.CPL == 0) { lay.CPL = c; hit = true; }
                         if (h.Contains("số công hưởng bhxh") && lay.CBH == 0) { lay.CBH = c; hit = true; }
                         if (h.Contains("công k3") && lay.CK3 == 0) { lay.CK3 = c; hit = true; }
+                        if(ExactHeader(d,ss,c,lay.HeaderRow,"tổng công") && genericWork==0)genericWork=c;
                         if (h.Contains("tổng công") && !hit) hit = true;
                         break;
                     case SheetKind.AnCa:
                         if (h.Contains("tổng công được thanh toán ăn ca")) hit = true;
                         break;
                     case SheetKind.BDDH:
-                        if (h.Contains("tổng công hưởng bdđh")) hit = true;
+                        if (h.Contains("tổng công hưởng bdđh") || h.Contains("tổng công bdđh")) hit = true;
                         break;
                     case SheetKind.Diem:
                         if (h.Contains("tổng điểm sản xuất") && lay.CDiemSX == 0) { lay.CDiemSX = c; hit = true; }
-                        if (h.Contains("tổng điểm sau xếp loại") && lay.CDiemHuong == 0) { lay.CDiemHuong = c; hit = true; }
+                        if ((h.Contains("tổng điểm sau xếp loại") || h.Contains("tổng điểm chia lương")) && lay.CDiemHuong == 0) { lay.CDiemHuong = c; hit = true; }
                         if (h.Contains("xếp loại") && !h.Contains("sau xếp loại") && lay.CXepLoai == 0) { lay.CXepLoai = c; hit = true; }
+                        if(ExactHeader(d,ss,c,lay.HeaderRow,"tổng điểm") && genericPoints==0)genericPoints=c;
                         if (h.Contains("tổng điểm") && !hit) hit = true;
                         break;
                 }
                 if (hit && c < firstSummary) firstSummary = c;
             }
-            lay.DayEnd = firstSummary == 200 ? 40 : firstSummary - 1;
+            if(lay.CSP==0 && genericWork>0) {
+                int firstComponent=200;foreach(int col in new[] {lay.CTG,lay.CVH,lay.CPL,lay.CBH})if(col>0)firstComponent=Math.Min(firstComponent,col);
+                if(HeaderText(d,ss,genericWork,lay.HeaderRow).Contains("quy ra công") || firstComponent<200 && genericWork<firstComponent)lay.CSP=genericWork;
+            }
+            if(lay.CDiemSX==0)lay.CDiemSX=genericPoints;
+            int dayEnd=MergedDayEnd(d,lay);
+            lay.DayEnd=dayEnd>0?Math.Min(dayEnd,firstSummary-1):(firstSummary==200?40:firstSummary-1);
             return lay;
         }
 
@@ -214,6 +243,7 @@ namespace CiscoLDTLApp
                     if(!done.Add(kv.Value)) continue;
                     var doc=ExcelService.LoadSheetXml(zip,kv.Value);if(doc==null)continue;
                     var lay=Detect(doc,ss);if(lay==null)continue;
+                    ValidateLayout(lay,kv.Key);
                     if(lay.Kind==SheetKind.Cong && kv.Key.ToLowerInvariant().Contains("sàng")) {
                         log.AppendLine(string.Format("- Sheet '{0}': bảng công chi tiết theo công đoạn phụ (đã nằm trong 'Bảng công' chính) -> không cộng thêm để tránh trùng.",kv.Key));continue;
                     }
@@ -253,9 +283,16 @@ namespace CiscoLDTLApp
                             continue;
                         }
                         if (IsSkipName(name)) continue;
+                        if(lay.Kind==SheetKind.BDDH && Regex.IsMatch(sdb.Trim(),@"^M[123]$",RegexOptions.IgnoreCase) && Regex.IsMatch(NormName(name),@"^[-+•]?\s*mức\s*[123]\s*:?$"))continue;
                         double dummy;
                         if (double.TryParse(name, out dummy)) continue;
                         rows++;
+                        if(lay.Kind==SheetKind.Cong) {
+                            double primary=ExcelService.GetCellDouble(doc,ss,ColName(lay.CSP)+r,double.NaN);
+                            if(double.IsNaN(primary) || double.IsInfinity(primary)) {
+                                warnings.Add(string.Format("[{0}] dòng {1}: {2} (SDB {3}), ô {4} không có số công hợp lệ -> giữ công đang có, chưa nạp dòng này.",kv.Key,r,name,sdb,ColName(lay.CSP)+r));continue;
+                            }
+                        }
 
                         string problem;EmployeeRecord emp=local.Find(sdb,name,sourceYears,out problem);
                         if(problem!=null) {warnings.Add(string.Format("[{0}] dòng {1}: {2} (SDB {3}): {4} -> chưa nạp.",kv.Key,r,name,sdb,problem));continue;}
@@ -356,12 +393,19 @@ namespace CiscoLDTLApp
                                 break;
 
                             case SheetKind.Diem:
-                                double dsx = Num(doc, ss, lay.CDiemSX, r);
-                                double dh = Num(doc, ss, lay.CDiemHuong, r);
-                                string xl = lay.CXepLoai > 0 ? Cell(doc, ss, lay.CXepLoai, r).ToUpperInvariant() : "";
-                                if (dsx > 0) emp.DiemSanXuat = Math.Round(dsx, 2);
-                                if (dh > 0) emp.HeSoHuong = Math.Round(dh, 2);
-                                if (xl == "A" || xl == "B" || xl == "C") emp.XepLoai = xl;
+                                double dsx=ExcelService.GetCellDouble(doc,ss,ColName(lay.CDiemSX)+r,double.NaN);
+                                double dh=lay.CDiemHuong>0?ExcelService.GetCellDouble(doc,ss,ColName(lay.CDiemHuong)+r,double.NaN):double.NaN;
+                                string xl=lay.CXepLoai>0?Cell(doc,ss,lay.CXepLoai,r).ToUpperInvariant():"";
+                                if(!double.IsNaN(dsx) && !double.IsInfinity(dsx))emp.DiemSanXuat=dsx;
+                                if(!double.IsNaN(dh) && !double.IsInfinity(dh))emp.HeSoHuong=dh;
+                                if(xl=="A" || xl=="B" || xl=="C")emp.XepLoai=xl;
+                                if(!emp.LaQuanLy && ws.MaPX!="CDNL" && !double.IsNaN(dsx) && !double.IsInfinity(dsx)) {
+                                    if(double.IsNaN(dh) || double.IsInfinity(dh)) {
+                                        string grade=(emp.XepLoai??"A").ToUpperInvariant();double factor=grade=="B"?0.9:grade=="C"?0.8:1;
+                                        emp.HeSoHuong=Math.Round(dsx*factor,2);
+                                    }
+                                    emp.ImportedPoints=new ImportedPointValues(emp);
+                                }
                                 break;
                         }
                         emp.NguonDuLieu = "Khớp Tên + SDB";
