@@ -1,3 +1,13 @@
+# v5.8 — GNV Luyện thép không bị cắt ở dòng 80
+
+`SteelGnvExportTests` kiểm tra trực tiếp biên bản NT Thép trong ZIP Excel, không dựa riêng vào snapshot GNV v5. Phủ nhập dòng cuối 97, ghi nguồn chưa sửa, dòng cao trước dòng thấp, giữ mốc cũ/cấp mốc mới không trùng, đủ 38 dòng, công thức tiền và tổng, số 0/điều chỉnh âm, xóa/xóa hết, vượt khuôn giữ nguyên SHA-256 tệp gốc và dọn tệp tạm. Bộ logic kiểm tra thêm nạp GNV đánh dấu danh sách để cập nhật mẫu đích. Chạy cả bản sao Excel nguồn ngoài repo; không sửa tệp đính kèm gốc.
+
+Lệnh: `SteelGnvExportTests.exe` (dữ liệu giả), hoặc `SteelGnvExportTests.exe <bản-Excel-nguồn.xlsx>` (tự tạo bản sao tạm). Hai script kiểm thử PowerShell đã bổ sung bài kiểm tra này. Giữ các kiểm thử hồi quy GNV, nạp công, quản lý, CĐNL, cẩu phôi, Word và phân loại/lưu công của v5.7.
+
+Giới hạn: mẫu Luyện thép hiện cố định 60–97; chưa tự chèn dòng và dịch công thức toàn workbook khi vượt 38 mục. Không coi các bản lỗi nguồn/link ngoài của Excel là kết quả đã duyệt. Biên dịch tham chiếu Microsoft .NET Framework 4.5, chạy Linux/Mono, chưa xác nhận trực tiếp trên Windows.
+
+---
+
 # v5.7 — quản lý theo chức danh, lưu công theo danh tính
 
 - `ClassificationAndSaveTests`: 51 kiểm tra dữ liệu giả; 616 kiểm tra khi chạy thêm trên bản sao Excel cục bộ. Phủ chức danh viết tắt/đầy đủ, cờ quản lý cũ sai, nhóm có cả quản lý/trực tiếp, không ghi đè công giữa PX, lưu công K3/ăn ca/BDĐH, giữ P/Q, xung đột và tính nguyên vẹn của tệp, xóa công về 0, SDB trùng nhưng khác tên, ba vòng lưu–mở và công thức tra cứu/nghiệm thu. Excel nguồn không đưa vào repo. Những ô mã nguồn lỗi sẵn được cô lập trong bộ tính thử khi kiểm tra tra cứu công; dữ liệu trên đĩa không bị sửa để che lỗi.

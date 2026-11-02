@@ -1,3 +1,17 @@
+# Antigravity v5.8 — đổ đầy đủ GNV Luyện thép vào Excel
+
+Tải [antigravity_v5_8_program_only.zip](antigravity_v5_8_program_only.zip). Đóng ứng dụng, thay EXE/launcher trong thư mục đang dùng và giữ **Data**, **Templates**. Tiêu đề ứng dụng hiện **v5.8**, EXE **5.8.0.0**. Mở bản sao Excel, nạp lại danh sách GNV đầy đủ rồi lưu để cập nhật những dòng chưa được ghi bởi bản cũ.
+
+Lỗi cũ: vùng GNV Luyện thép trong mẫu là **60–97**, nhưng hàm ghi chỉ chạy **61–80** và dùng `break` khi gặp mục ở dòng cao hơn. Vì vậy mục ở dòng 92 và cả các mục phía sau nó có thể không được ghi; bộ đọc còn bỏ dòng 97.
+
+Bản mới đọc/ghi hết vùng này, giữ dòng gốc hợp lệ, cấp riêng ô trống cho dòng mới hoặc số dòng trùng/không hợp lệ. Khi danh sách được chỉnh sửa/nạp lại, các dòng đã xóa được xóa trong biên bản, dòng số 0 vẫn được lưu, và tổng GNV lấy từ toàn bộ vùng chi tiết. Dòng tự tính dùng khối lượng × đơn giá, làm tròn đến đồng; khoản nguồn đặc biệt chưa sửa vẫn giữ cách tính nguồn. Phần lương chế độ từ dòng 98 không được dùng làm chỗ ghi GNV.
+
+Mẫu hiện hỗ trợ **38 dòng GNV Luyện thép**. Nếu vượt, chương trình báo số dòng và dừng toàn bộ lần lưu, giữ nguyên Excel gốc; không lưu một phần rồi báo thành công. Việc mở rộng/chèn dòng của mẫu vượt khuôn hiện tại chưa được hỗ trợ tự động.
+
+Đã kiểm tra trực tiếp ô chi tiết và công thức tổng Excel, không chỉ sheet lưu nội bộ: đủ 38 mục, mục sau dòng 80, dòng 97, thứ tự đảo, trùng dòng, thêm/xóa/xóa hết, công bằng 0, điều chỉnh âm, nạp GNV, lưu–mở lại và lỗi vượt khuôn không thay tệp gốc. Kiểm thử dùng dữ liệu giả và bản sao Excel cục bộ; không đưa dữ liệu người dùng vào gói hoặc GitHub. Chạy kiểm thử Linux/Mono với tham chiếu .NET Framework 4.5, chưa chạy trực tiếp Windows. Giữ bản sửa quản lý, công 171/177, cẩu phôi, CĐNL, GNV và Word trước đây.
+
+---
+
 # Antigravity v5.7 — phân loại quản lý và giữ công khi lưu Excel
 
 Tải [antigravity_v5_7_program_only.zip](antigravity_v5_7_program_only.zip). Đóng ứng dụng, giải nén và thay EXE/launcher trong thư mục đang dùng. Giữ **Data**, **Templates**; mở một bản sao Excel để đối chiếu trước. Tiêu đề ứng dụng hiện **v5.7**; EXE **5.7.0.0**.

@@ -578,7 +578,7 @@ namespace CiscoLDTLApp
                     lt.TLBinhQuanToanPX = Math.Round(GetCellDouble(doc, ss, "O143", lt.TLBinhQuanToanPX), 2);
                     lt.ThuNhapBQToanPX = Math.Round(GetCellDouble(doc, ss, "O144", lt.ThuNhapBQToanPX), 2);
 
-                    var gnvList = ReadGNVRows(doc, ss, 60, 96);
+                    var gnvList = ReadGNVRows(doc, ss, 60, 97);
                     if (gnvList.Count > 0) lt.ListGNV = gnvList;
                 }
 
@@ -1210,7 +1210,7 @@ namespace CiscoLDTLApp
 
                         UpdateNTManagementRows(doc, managementStrings, ws, 108, 113);
 
-                        WriteGNVRows(doc, ws.ListGNV, 61, 80, "D", "I", "J");
+                        WriteSteelGnvRows(doc, ws);
                         SaveSheetXml(zip, path, doc);
 
                         if (sheetMap.ContainsKey("9 tháng Luyện thép"))
@@ -2094,6 +2094,48 @@ namespace CiscoLDTLApp
             SaveSheetXml(zip, path, doc);
         }
 
+        // Steel's detail section is 60..97; 98 starts statutory pay. Never truncate it silently.
+        private static void WriteSteelGnvRows(XmlDocument doc, WorkshopData ws)
+        {
+            const int start=60, end=97;
+            var items=ws.ListGNV;
+            if(items.Count>end-start+1)
+                throw new ArgumentException("GNV Luyện thép có "+items.Count+" dòng, vượt "+(end-start+1)+" dòng chi tiết của mẫu Excel (60–97). Chưa lưu; cần bổ sung mẫu đủ dòng trước khi xuất để không thiếu dữ liệu.");
+            var assigned=new int[items.Count]; var used=new HashSet<int>();
+            // Reserve every valid native anchor before assigning new/imported items.
+            for(int i=0;i<items.Count;i++) {
+                int r=items[i].ExcelRow;
+                if(r>=start && r<=end && used.Add(r)) assigned[i]=r;
+            }
+            int next=start;
+            for(int i=0;i<items.Count;i++) if(assigned[i]==0) {
+                while(used.Contains(next)) next++;
+                assigned[i]=next; used.Add(next++);
+            }
+            if(ws.GnvDaChinhSua) {
+                // The edited list is authoritative, including removed/zero items.
+                for(int r=start;r<=end;r++) if(!used.Contains(r)) {
+                    SetCellInlineString(doc,"B"+r,"",false); SetCellInlineString(doc,"C"+r,"",false);
+                    foreach(string col in new[] {"D","I","J"}) SetCellNumeric(doc,col+r,0,false);
+                }
+            }
+            for(int i=0;i<items.Count;i++) {
+                var item=items[i]; int r=assigned[i];
+                bool preserve=!ws.GnvDaChinhSua && !item.TuTinhThanhTien && item.ExcelRow==r;
+                SetCellInlineString(doc,"B"+r,item.NoiDung,false);
+                SetCellInlineString(doc,"C"+r,string.IsNullOrEmpty(item.DVT)?"Công":item.DVT,false);
+                SetCellNumeric(doc,"D"+r,item.KhoiLuong,preserve);
+                SetCellNumeric(doc,"I"+r,item.DonGia,preserve);
+                if(item.TuTinhThanhTien) SetCraneFormula(doc,"J"+r,"ROUND(D"+r+"*I"+r+",0)",item.ThanhTien);
+                else SetCellNumeric(doc,"J"+r,item.ThanhTien,preserve);
+                item.ExcelRow=r;
+            }
+            if(ws.GnvDaChinhSua) {
+                SetCraneFormula(doc,"D59","SUM(D60:D97)",ws.CongCVKhac);
+                SetCraneFormula(doc,"J59","SUM(J60:J97)",ws.LuongCVKhac);
+            }
+        }
+
         private static void WriteGNVRows(XmlDocument doc, List<ArisingWorkItem> items, int startRow, int maxRow, string colKL, string colDG, string colTT)
         {
             if (items == null || items.Count == 0) return;
@@ -2365,6 +2407,8 @@ namespace CiscoLDTLApp
                     }
                 }
 
+                if(importedGNV>0) ws.GnvDaChinhSua=true;
+
                 if (matchedEmployees > 0)
                 {
                     ws.RecalculateFromEmployees(true);
@@ -2453,6 +2497,7 @@ namespace CiscoLDTLApp
             {
                 dst.ListGNV.Clear();
                 dst.ListGNV.AddRange(src.ListGNV);
+                dst.GnvDaChinhSua=true;
             }
             if (src.ListNhanVien != null && src.ListNhanVien.Count > 0)
             {

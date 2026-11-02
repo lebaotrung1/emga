@@ -3,6 +3,10 @@ Push-Location $PSScriptRoot
 try {
     & (Join-Path $PSScriptRoot 'Build.ps1')
     $csc = "$env:WINDIR/Microsoft.NET/Framework64/v4.0.30319/csc.exe"
+    & $csc /nologo /target:exe /out:SteelGnvExportTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll tests/SteelGnvExportTests.cs
+    if ($LASTEXITCODE -ne 0) { throw 'Steel GNV export test build failed' }
+    & .\SteelGnvExportTests.exe (Join-Path $PSScriptRoot 'Data/03.9.2026_NT_T9_TCHC.xlsx')
+    if ($LASTEXITCODE -ne 0) { throw 'Steel GNV export tests failed' }
     & $csc /nologo /target:exe /out:ClassificationAndSaveTests.exe /reference:CiscoLDTLApp_v5.exe /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll tests/ClassificationAndSaveTests.cs
     if ($LASTEXITCODE -ne 0) { throw 'Classification/save test build failed' }
     & .\ClassificationAndSaveTests.exe (Join-Path $PSScriptRoot 'Data/03.9.2026_NT_T9_TCHC.xlsx')
