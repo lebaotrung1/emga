@@ -1,3 +1,12 @@
+# v5.9 — GNV cả 5 phân xưởng
+
+- `AllWorkshopGnvExportTests`: 697 kiểm tra dữ liệu giả, gồm trực tiếp ô chi tiết/tổng trên 5 sheet NT và Word đủ danh sách; 454 kiểm tra khi chạy trên bản sao Excel nguồn. Các giới hạn và bảo vệ nhóm/vùng ghi xem `RA_SOAT_GNV.md`.
+- `CdnlPayrollTests`: thêm kiểm tra âm ở cuối vùng GNV, không cộng lại vào I416, xóa cả giá trị live nguồn. Rà soát lỗi lưu–mở quỹ bằng bộ kiểm thử Excel nguồn; GNV chưa sửa không đè kết quả công thức bằng giá trị tạm từ model.
+- Giữ các bài kiểm thử Thép v5.8, phân loại và giữ công v5.7, quỹ quản lý, nạp công, GNV, cẩu phôi, CĐNL, sản lượng và Word. Hai script PowerShell đã thêm bộ kiểm thử cả 5 PX.
+- Chạy trên Linux/Mono, biên dịch tham chiếu Microsoft .NET Framework 4.5; chưa kiểm thử trực tiếp Windows. Excel nguồn chỉ được dùng trên bản sao và không đưa lên repo/gói.
+
+---
+
 # v5.8 — GNV Luyện thép không bị cắt ở dòng 80
 
 `SteelGnvExportTests` kiểm tra trực tiếp biên bản NT Thép trong ZIP Excel, không dựa riêng vào snapshot GNV v5. Phủ nhập dòng cuối 97, ghi nguồn chưa sửa, dòng cao trước dòng thấp, giữ mốc cũ/cấp mốc mới không trùng, đủ 38 dòng, công thức tiền và tổng, số 0/điều chỉnh âm, xóa/xóa hết, vượt khuôn giữ nguyên SHA-256 tệp gốc và dọn tệp tạm. Bộ logic kiểm tra thêm nạp GNV đánh dấu danh sách để cập nhật mẫu đích. Chạy cả bản sao Excel nguồn ngoài repo; không sửa tệp đính kèm gốc.

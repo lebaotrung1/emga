@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.8";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.9";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.8)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.9)");
             crane.Click += (sender, args) => {
                 if (_workshops == null || _currentIndex < 0) return;
                 CommitAllGridEdits();
@@ -258,7 +258,7 @@ namespace CiscoLDTLApp
                 using (var form = new CranePayrollForm(ws))
                     if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
             };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.8)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.9)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -274,7 +274,7 @@ namespace CiscoLDTLApp
             };
             payrollMenu.Items.Add(management);
             payrollMenu.Items.Add(crane);
-            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.8)");
+            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.9)");
             cdnl.Click+=(sender,args)=> {
                 if(_workshops==null || _currentIndex<0) return;
                 CommitAllGridEdits(); SaveUIToCurrentWorkshop(); var ws=_workshops[_currentIndex];
@@ -1831,7 +1831,7 @@ namespace CiscoLDTLApp
                 int totalEmp = 0;
                 foreach (var w in _workshops) totalEmp += w.ListNhanVien.Count;
                 SetStatus(string.Format("Đã lưu chi tiết {0} người lao động & 5 bảng nghiệm thu vào Excel: {1}", totalEmp, _excelFilePath));
-                MessageBox.Show(string.Format("Đã tự động điền đầy đủ:\n1. Chi tiết từng người lao động ({0} người) vào các sheet 'Tổng hợp công', 'T kết', 'Gang', 'thép', 'CĐNL', 'K. tuyển'\n2. Các bảng nghiệm thu 'NT thiêu kết', 'NT gang', 'NT Thép', 'NT CĐNL', 'TT BDĐH', '9 tháng ...' (đã cập nhật các mục GNV Luyện thép trong danh sách)\n\nFile Excel: {1}", totalEmp, _excelFilePath), "Điền Bảng Nghiệm Thu Excel Thành Công", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(string.Format("Đã tự động điền đầy đủ:\n1. Chi tiết từng người lao động ({0} người) vào các sheet 'Tổng hợp công', 'T kết', 'Gang', 'thép', 'CĐNL', 'K. tuyển'\n2. Các bảng nghiệm thu 'NT thiêu kết', 'NT gang', 'NT Thép', 'NT CĐNL', 'TT BDĐH', '9 tháng ...' (đã cập nhật chi tiết GNV của từng phân xưởng)\n\nFile Excel: {1}", totalEmp, _excelFilePath), "Điền Bảng Nghiệm Thu Excel Thành Công", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {

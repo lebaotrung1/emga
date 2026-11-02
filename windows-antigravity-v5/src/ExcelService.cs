@@ -456,7 +456,7 @@ namespace CiscoLDTLApp
                     tk.ThuNhapBQLDTT = Math.Round(GetCellDouble(doc, ss, "O146", tk.ThuNhapBQLDTT), 2);
                     tk.BQNgayCongLVTT = Math.Round(GetCellDouble(doc, ss, "O149", tk.BQNgayCongLVTT), 0);
 
-                    var gnvList = ReadGNVRows(doc, ss, 80, 90);
+                    var gnvList = ReadGnvDetails(doc, ss, tk);
                     if (gnvList.Count > 0) tk.ListGNV = gnvList;
                 }
 
@@ -511,7 +511,7 @@ namespace CiscoLDTLApp
                     lg.TLBinhQuanToanPX = Math.Round(GetCellDouble(doc, ss, "O163", lg.TLBinhQuanToanPX), 2);
                     lg.ThuNhapBQToanPX = Math.Round(GetCellDouble(doc, ss, "O167", lg.ThuNhapBQToanPX), 2);
 
-                    var gnvList = ReadGNVRows(doc, ss, 60, 102);
+                    var gnvList = ReadGnvDetails(doc, ss, lg);
                     if (gnvList.Count > 0) lg.ListGNV = gnvList;
                 }
 
@@ -578,7 +578,7 @@ namespace CiscoLDTLApp
                     lt.TLBinhQuanToanPX = Math.Round(GetCellDouble(doc, ss, "O143", lt.TLBinhQuanToanPX), 2);
                     lt.ThuNhapBQToanPX = Math.Round(GetCellDouble(doc, ss, "O144", lt.ThuNhapBQToanPX), 2);
 
-                    var gnvList = ReadGNVRows(doc, ss, 60, 97);
+                    var gnvList = ReadGnvDetails(doc, ss, lt);
                     if (gnvList.Count > 0) lt.ListGNV = gnvList;
                 }
 
@@ -622,9 +622,13 @@ namespace CiscoLDTLApp
                     cdnl.ThuNhapBQToanPX = Math.Round(GetCellDouble(doc, ss, "N443", cdnl.ThuNhapBQToanPX), 2);
                     cdnl.ThuNhapBQLDTT = Math.Round(GetCellDouble(doc, ss, "N454", cdnl.ThuNhapBQLDTT), 2);
 
-                    var gnvList = ReadGNVRowsCDNL(doc, ss, 372, 393);
+                    var gnvList = ReadGnvDetails(doc, ss, cdnl);
                     if (gnvList.Count > 0) cdnl.ListGNV = gnvList;
                 }
+
+                var kt=workshops[4];
+                string ktPath;
+                if(TryGetGnvSheet(sheetMap,kt,out ktPath)) { var details=ReadGnvDetails(LoadSheetXml(zip,ktPath),ss,kt);kt.ListGNV=details; }
 
                 // Không dùng số mẫu hard-code làm quỹ QL khi bảng nguồn bị lỗi/không có ô quỹ rõ ràng.
                 foreach (var ws in workshops)
@@ -912,42 +916,34 @@ namespace CiscoLDTLApp
             }
         }
 
-        private static List<ArisingWorkItem> ReadGNVRows(XmlDocument doc, List<string> ss, int startRow, int endRow)
+        private static bool TryGetGnvSheet(Dictionary<string,string> map,WorkshopData ws,out string path)
         {
-            var list = new List<ArisingWorkItem>();
-            int stt = 1;
-            for (int r = startRow; r <= endRow; r++)
-            {
-                string name = GetCellString(doc, ss, "B" + r).Trim();
-                string dvt = GetCellString(doc, ss, "C" + r).Trim();
-                double kl = GetCellDouble(doc, ss, "D" + r, 0);
-                double dg = GetCellDouble(doc, ss, "I" + r, 0);
-                double tt = GetCellDouble(doc, ss, "J" + r, 0);
-                if (!string.IsNullOrEmpty(name) && (kl > 0 || tt > 0))
-                {
-                    list.Add(new ArisingWorkItem(stt++, name, string.IsNullOrEmpty(dvt) ? "Công" : dvt, Math.Round(kl, 2), Math.Round(dg, 0), Math.Round(tt, 0), "", r));
-                }
-            }
-            return list;
+            path=null;if(string.IsNullOrEmpty(ws.SheetNT)) return false;
+            return map.TryGetValue(ws.SheetNT,out path) || map.TryGetValue(ws.SheetNT.Trim(),out path);
         }
 
-        private static List<ArisingWorkItem> ReadGNVRowsCDNL(XmlDocument doc, List<string> ss, int startRow, int endRow)
+        private static void ValidateGnvTemplate(XmlDocument doc,List<string> strings,WorkshopData ws)
         {
-            var list = new List<ArisingWorkItem>();
-            int stt = 1;
-            for (int r = startRow; r <= endRow; r++)
-            {
-                string name = GetCellString(doc, ss, "B" + r).Trim();
-                string dvt = GetCellString(doc, ss, "C" + r).Trim();
-                double kl = GetCellDouble(doc, ss, "D" + r, 0);
-                double dg = GetCellDouble(doc, ss, "H" + r, 0);
-                double tt = GetCellDouble(doc, ss, "I" + r, 0);
-                if (!string.IsNullOrEmpty(name) && (kl > 0 || tt > 0))
-                {
-                    list.Add(new ArisingWorkItem(stt++, name, string.IsNullOrEmpty(dvt) ? "Công" : dvt, Math.Round(kl, 2), Math.Round(dg, 0), Math.Round(tt, 0), "Tổ SCCĐ", r));
-                }
+            int boundary=ws.MaPX=="TK"?91:ws.MaPX=="LG"?104:ws.MaPX=="LT"?98:ws.MaPX=="CDNL"?417:102;
+            string label=GetCellString(doc,strings,"B"+boundary).Trim().ToLowerInvariant();
+            if(!label.Contains("chế độ")) throw new ArgumentException("Mẫu "+ws.TenPX+" không đúng vị trí vùng GNV/lương chế độ được hỗ trợ. Chưa xử lý để tránh ghi nhầm hoặc bỏ sót dòng; cần đối chiếu lại mẫu Excel.");
+            if(ws.MaPX=="CDNL") for(int r=394;r<=415;r++)
+                if(GetCellDouble(doc,strings,"D"+r,0)!=0 || GetCellDouble(doc,strings,"E"+r,0)!=0 || GetCellDouble(doc,strings,"I"+r,0)!=0)
+                    throw new ArgumentException("CĐNL có công/tiền ở dòng "+r+", ngoài vùng GNV 372–393 trong công thức quỹ I371. Cần đối chiếu vùng tổng trước khi nhập; không bỏ qua dòng hoặc tự cộng sang quỹ khác.");
+        }
+
+        private static List<ArisingWorkItem> ReadGnvDetails(XmlDocument doc,List<string> strings,WorkshopData ws)
+        {
+            ValidateGnvTemplate(doc,strings,ws);
+            var result=new List<ArisingWorkItem>();var layout=GnvExcelLayout.For(ws.MaPX);
+            foreach(int r in layout.Rows) {
+                string name=GetCellString(doc,strings,"B"+r).Trim();
+                double quantity=GetCellDouble(doc,strings,layout.Quantity+r,0),amount=GetCellDouble(doc,strings,layout.Amount+r,0);
+                if(quantity==0 && amount==0) continue;
+                if(name=="" || name.StartsWith("#")) throw new ArgumentException("GNV "+ws.TenPX+" dòng "+r+" có công/tiền nhưng thiếu hoặc lỗi nội dung. Cần kiểm tra dòng nguồn, không bỏ qua dữ liệu này.");
+                result.Add(new ArisingWorkItem(result.Count+1,name,GetCellString(doc,strings,"C"+r),quantity,GetCellDouble(doc,strings,layout.Rate+r,0),amount,"",r));
             }
-            return list;
+            return result;
         }
 
         /// <summary>
@@ -1065,7 +1061,6 @@ namespace CiscoLDTLApp
                         // Cập nhật bảng chi tiết Quản lý trong NT thiêu kết (dòng 102..106)
                         UpdateNTManagementRows(doc, managementStrings, ws, 102, 106);
 
-                        WriteGNVRows(doc, ws.ListGNV, 81, 89, "D", "I", "J");
                         SaveSheetXml(zip, path, doc);
 
                         if (sheetMap.ContainsKey("9 tháng Thiêu kết"))
@@ -1124,7 +1119,6 @@ namespace CiscoLDTLApp
 
                         UpdateNTManagementRows(doc, managementStrings, ws, 115, 121);
 
-                        WriteGNVRows(doc, ws.ListGNV, 60, 75, "D", "I", "J");
                         SaveSheetXml(zip, path, doc);
 
                         if (sheetMap.ContainsKey("9 tháng Luyện gang"))
@@ -1210,7 +1204,6 @@ namespace CiscoLDTLApp
 
                         UpdateNTManagementRows(doc, managementStrings, ws, 108, 113);
 
-                        WriteSteelGnvRows(doc, ws);
                         SaveSheetXml(zip, path, doc);
 
                         if (sheetMap.ContainsKey("9 tháng Luyện thép"))
@@ -1307,9 +1300,10 @@ namespace CiscoLDTLApp
                 SaveAdditionalEmployees(zip, workshops);
                 SaveManagementProductionSettings(zip, workshops);
                 SaveCranePayroll(zip, workshops);
-                SaveEditedGnv(zip, workshops);
                 SaveManagementPayrollReport(zip, workshops);
                 SaveCdnlPayroll(zip, workshops);
+                SaveNativeGnv(zip,workshops);
+                SaveEditedGnv(zip,workshops);
                 if(thcPath!=null) { thcDoc=LoadSheetXml(zip,thcPath); masterPlan.Write(thcDoc,LoadSharedStrings(zip)); SaveSheetXml(zip,thcPath,thcDoc); }
                 SaveRoleSummaries(zip,workshops);
                 EnsureFullCalcOnLoad(zip);
@@ -1436,6 +1430,12 @@ namespace CiscoLDTLApp
                         GetCellDouble(doc,strings,"E"+r,0),GetCellDouble(doc,strings,"F"+r,0),GetCellDouble(doc,strings,"G"+r,0),
                         GetCellString(doc,strings,"I"+r),(int)GetCellDouble(doc,strings,"H"+r,0))
                         { TuTinhThanhTien=GetCellString(doc,strings,"J"+r)=="True" };
+                    var layout=GnvExcelLayout.For(ws.MaPX);
+                    string nativePath;
+                    if(Array.IndexOf(layout.SubtotalRows,item.ExcelRow)>=0 && TryGetGnvSheet(map,ws,out nativePath)) {
+                        var source=LoadSheetXml(zip,nativePath);
+                        if(GetCellString(source,strings,"B"+item.ExcelRow).Trim()==(item.NoiDung??"").Trim()) continue;
+                    }
                     ws.ListGNV.Add(item);
                 }
             }
@@ -2094,62 +2094,40 @@ namespace CiscoLDTLApp
             SaveSheetXml(zip, path, doc);
         }
 
-        // Steel's detail section is 60..97; 98 starts statutory pay. Never truncate it silently.
-        private static void WriteSteelGnvRows(XmlDocument doc, WorkshopData ws)
+        private static void SaveNativeGnv(ZipArchive zip,List<WorkshopData> workshops)
         {
-            const int start=60, end=97;
-            var items=ws.ListGNV;
-            if(items.Count>end-start+1)
-                throw new ArgumentException("GNV Luyện thép có "+items.Count+" dòng, vượt "+(end-start+1)+" dòng chi tiết của mẫu Excel (60–97). Chưa lưu; cần bổ sung mẫu đủ dòng trước khi xuất để không thiếu dữ liệu.");
-            var assigned=new int[items.Count]; var used=new HashSet<int>();
-            // Reserve every valid native anchor before assigning new/imported items.
-            for(int i=0;i<items.Count;i++) {
-                int r=items[i].ExcelRow;
-                if(r>=start && r<=end && used.Add(r)) assigned[i]=r;
-            }
-            int next=start;
-            for(int i=0;i<items.Count;i++) if(assigned[i]==0) {
-                while(used.Contains(next)) next++;
-                assigned[i]=next; used.Add(next++);
-            }
-            if(ws.GnvDaChinhSua) {
-                // The edited list is authoritative, including removed/zero items.
-                for(int r=start;r<=end;r++) if(!used.Contains(r)) {
-                    SetCellInlineString(doc,"B"+r,"",false); SetCellInlineString(doc,"C"+r,"",false);
-                    foreach(string col in new[] {"D","I","J"}) SetCellNumeric(doc,col+r,0,false);
+            var map=GetSheetMap(zip);
+            foreach(var ws in workshops) {
+                if(!ws.GnvDaChinhSua && ws.ListGNV.Count==0) continue;
+                var layout=GnvExcelLayout.For(ws.MaPX);string path;
+                if(layout==null) continue;
+                var plan=layout.Plan(ws);
+                if(!TryGetGnvSheet(map,ws,out path)) {
+                    if(ws.GnvDaChinhSua) throw new ArgumentException("Không tìm thấy sheet nghiệm thu "+ws.SheetNT+" để ghi GNV. Chưa lưu tệp.");
+                    continue;
                 }
-            }
-            for(int i=0;i<items.Count;i++) {
-                var item=items[i]; int r=assigned[i];
-                bool preserve=!ws.GnvDaChinhSua && !item.TuTinhThanhTien && item.ExcelRow==r;
-                SetCellInlineString(doc,"B"+r,item.NoiDung,false);
-                SetCellInlineString(doc,"C"+r,string.IsNullOrEmpty(item.DVT)?"Công":item.DVT,false);
-                SetCellNumeric(doc,"D"+r,item.KhoiLuong,preserve);
-                SetCellNumeric(doc,"I"+r,item.DonGia,preserve);
-                if(item.TuTinhThanhTien) SetCraneFormula(doc,"J"+r,"ROUND(D"+r+"*I"+r+",0)",item.ThanhTien);
-                else SetCellNumeric(doc,"J"+r,item.ThanhTien,preserve);
-                item.ExcelRow=r;
-            }
-            if(ws.GnvDaChinhSua) {
-                SetCraneFormula(doc,"D59","SUM(D60:D97)",ws.CongCVKhac);
-                SetCraneFormula(doc,"J59","SUM(J60:J97)",ws.LuongCVKhac);
-            }
-        }
-
-        private static void WriteGNVRows(XmlDocument doc, List<ArisingWorkItem> items, int startRow, int maxRow, string colKL, string colDG, string colTT)
-        {
-            if (items == null || items.Count == 0) return;
-            int idx = 0;
-            foreach (var item in items)
-            {
-                int r = item.ExcelRow > 0 ? item.ExcelRow : (startRow + idx);
-                if (r > maxRow) break;
-                SetCellInlineString(doc, "B" + r, item.NoiDung, false);
-                SetCellInlineString(doc, "C" + r, string.IsNullOrEmpty(item.DVT) ? "Công" : item.DVT, false);
-                SetCellNumeric(doc, colKL + r, item.KhoiLuong, true);
-                if (item.DonGia > 0 || item.TuTinhThanhTien) SetCellNumeric(doc, colDG + r, item.DonGia, true);
-                SetCellNumeric(doc, colTT + r, item.ThanhTien, true);
-                idx++;
+                var doc=LoadSheetXml(zip,path);
+                ValidateGnvTemplate(doc,LoadSharedStrings(zip),ws);
+                // The department calculator owns untouched source formulas and their evaluated values.
+                if(!ws.GnvDaChinhSua) continue;
+                if(ws.GnvDaChinhSua) foreach(int r in layout.Rows) if(!plan.ContainsKey(r)) {
+                    SetCellInlineString(doc,"B"+r,"",false);SetCellInlineString(doc,"C"+r,"",false);
+                    foreach(string col in new[] {layout.Quantity,layout.Rate,layout.Amount}) SetCellNumeric(doc,col+r,0,false);
+                }
+                foreach(var pair in plan) {
+                    int r=pair.Key;var item=pair.Value;
+                    bool preserve=!ws.GnvDaChinhSua && !item.TuTinhThanhTien && item.ExcelRow==r;
+                    SetCellInlineString(doc,"B"+r,item.NoiDung,false);SetCellInlineString(doc,"C"+r,string.IsNullOrEmpty(item.DVT)?"Công":item.DVT,false);
+                    SetCellNumeric(doc,layout.Quantity+r,item.KhoiLuong,preserve);SetCellNumeric(doc,layout.Rate+r,item.DonGia,preserve);
+                    if(item.TuTinhThanhTien) SetCraneFormula(doc,layout.Amount+r,"ROUND("+layout.Quantity+r+"*"+layout.Rate+r+",0)",item.ThanhTien);
+                    else SetCellNumeric(doc,layout.Amount+r,item.ThanhTien,preserve);
+                    item.ExcelRow=r;
+                }
+                if(ws.GnvDaChinhSua) foreach(var total in layout.Totals()) {
+                    double sum=0;foreach(int r in total.Value) {ArisingWorkItem item;if(plan.TryGetValue(r,out item))sum+=total.Key.StartsWith("D")?item.KhoiLuong:item.ThanhTien;}
+                    SetCraneFormula(doc,total.Key,layout.Formula(total.Key,total.Value),sum);
+                }
+                SaveSheetXml(zip,path,doc);
             }
         }
 

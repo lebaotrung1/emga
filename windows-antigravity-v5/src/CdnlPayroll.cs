@@ -110,7 +110,7 @@ namespace CiscoLDTLApp
                 if(IsRatingRow(e.ExcelRow)) Book.TextValues["CĐNL!Z"+r]=e.XepLoai??"A";
             }
             foreach(var p in Overrides) if(p.Value.Active) Book.Values[p.Key]=p.Value.Value;
-            if(ws.GnvDaChinhSua) { double sum=0; foreach(var item in ws.ListGNV) { sum+=item.ThanhTien; if(item.ExcelRow>=372 && item.ExcelRow<=393) { Book.Set("NT CĐNL","D"+item.ExcelRow,item.KhoiLuong); Book.Set("NT CĐNL","E"+item.ExcelRow,item.KhoiLuong); Book.Set("NT CĐNL","H"+item.ExcelRow,item.DonGia); Book.Set("NT CĐNL","I"+item.ExcelRow,item.ThanhTien); } } Book.Set("NT CĐNL","I371",sum); }
+            foreach(var unit in Workshops) {var layout=GnvExcelLayout.For(unit.MaPX);if(layout!=null) layout.Bind(Book,unit); }
             foreach(var e in ws.ListNhanVien) {
                 CdnlEmployeeRule rule; if(!Rules.TryGetValue(EmployeeKey(e),out rule)) continue;
                 if(e.ExcelRow>0) Book.Set("CĐNL","AB"+e.ExcelRow,rule.Weight);

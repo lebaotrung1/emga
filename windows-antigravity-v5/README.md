@@ -1,3 +1,23 @@
+# Antigravity v5.9 — kiểm tra GNV cả 5 phân xưởng
+
+Tải [antigravity_v5_9_program_only.zip](antigravity_v5_9_program_only.zip). Đóng ứng dụng, thay EXE/launcher, giữ **Data** và **Templates**. Tiêu đề ứng dụng hiện **v5.9**, EXE **5.9.0.0**. Mở bản sao Excel còn danh sách GNV đầy đủ hoặc nạp lại GNV rồi **Lưu Excel**.
+
+Đã sửa giới hạn ghi GNV Thiêu kết/Luyện gang, bổ sung ghi chi tiết Khai tuyển/CĐNL, thống nhất vùng đọc–ghi theo từng mẫu. Không đọc dòng tổng phụ thành một khoản GNV rồi cộng trùng. Khoản chuyển thanh toán âm được giữ; thêm/xóa/sửa về 0 được ghi cả vào chi tiết và tổng trong biên bản Excel. Word giữ đủ các mục trong danh sách dài.
+
+| Phân xưởng | Sức chứa chi tiết của mẫu hiện tại |
+| --- | ---: |
+| Thiêu kết | 11 dòng |
+| Luyện gang | 38 dòng của PX + 2 dòng chuyển thanh toán PX khác |
+| Luyện thép | 38 dòng |
+| CĐNL | 22 dòng trong quỹ GNV sửa chữa nguồn |
+| Khai tuyển | 36 dòng |
+
+**Vượt khuôn sẽ báo rõ và giữ nguyên tệp gốc**, không ghi một phần rồi báo thành công. Không tự chèn dòng/dịch công thức toàn workbook. Mẫu chèn thêm dòng hoặc CĐNL có công/tiền ngoài vùng quỹ GNV gốc cần được đối chiếu trước; chương trình báo thay vì tự bỏ qua hoặc cộng vào quỹ khác. Xem [rà soát từng xưởng](RA_SOAT_GNV.md) để biết vùng và quy tắc tổng riêng.
+
+Giữ các sửa đổi quản lý, công 171/177, nạp công/ăn ca/BDĐH, cẩu phôi, quỹ CĐNL, GNV và Word triệu đồng một số lẻ. Gói chỉ có chương trình/mã nguồn/hướng dẫn/kiểm thử; không có dữ liệu người dùng. Kiểm thử trên Linux/Mono với tham chiếu .NET Framework 4.5 chính thức; chưa chạy trực tiếp Windows.
+
+---
+
 # Antigravity v5.8 — đổ đầy đủ GNV Luyện thép vào Excel
 
 Tải [antigravity_v5_8_program_only.zip](antigravity_v5_8_program_only.zip). Đóng ứng dụng, thay EXE/launcher trong thư mục đang dùng và giữ **Data**, **Templates**. Tiêu đề ứng dụng hiện **v5.8**, EXE **5.8.0.0**. Mở bản sao Excel, nạp lại danh sách GNV đầy đủ rồi lưu để cập nhật những dòng chưa được ghi bởi bản cũ.

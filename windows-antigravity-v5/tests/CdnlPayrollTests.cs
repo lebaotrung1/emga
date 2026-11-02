@@ -64,6 +64,13 @@ class CdnlPayrollTests
         data.Workshops[0].LuongSPTT=20000000; CdnlPayroll.EnsureCurrent(w); Check(w.LuongSPTT==1357000 && e.LuongSanPham==1024000,"Other workshop fund changes propagate to CDNL and correct allocation group");
         w.GnvDaChinhSua=true; w.ListGNV.Add(new ArisingWorkItem(1,"GNV giả","Công",2,30000,60000)); w.RecalculateFromEmployees(true);
         Check(data.Last.Groups["I356"]==85000 && w.LuongCVKhac==1234,"Edited GNV flows through I371 once, not additional whole-workshop wage");
+        w.ListGNV.Add(new ArisingWorkItem(2,"Chuyển thanh toán giả","Công",-1,10000,-10000,"",393));
+        w.RecalculateFromEmployees(true);
+        Check(data.Last.Groups["I356"]==75000 && w.LuongCVKhac==1234,"Negative tail GNV reduces repair fund once; independent I416 stays separate");
+        Check(data.Book.Values["NT CĐNL!I393"]==-10000 && data.Book.Values["NT CĐNL!I372"]==60000,"Live calculation uses same assigned rows and values as native Excel export");
+        w.ListGNV.Clear();w.RecalculateFromEmployees(true);
+        Check(data.Last.Groups["I356"]==25000 && data.Book.Values["NT CĐNL!I393"]==0,"Deleted GNV also clears stale live source rows, not only I371 total");
+
         var draft=data.Draft(); draft.SetOverride("NT CĐNL!H46",.1,"Giá giả để kiểm thử"); draft.Preview(w);
         Check(data.Overrides.Count==0 && w.Cdnl==data,"Cancel/draft input isolation");
         bool rejected=false; try { draft.SetOverride("NT CĐNL!H46",.1,""); } catch(ArgumentException) { rejected=true; } Check(rejected,"Override needs reason");

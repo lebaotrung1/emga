@@ -763,8 +763,7 @@ namespace CiscoLDTLApp
                 {
                     if (item.TuTinhThanhTien || (item.KhoiLuong > 0 && item.DonGia > 0 && item.ThanhTien == 0))
                         item.ThanhTien = ManagementPayroll.RoundMoney(item.KhoiLuong * item.DonGia, 1);
-                    sumGNVCong += item.KhoiLuong;
-                    sumGNVTien += item.ThanhTien;
+                    if(GnvExcelLayout.InPayroll(this,item)) { sumGNVCong += item.KhoiLuong; sumGNVTien += item.ThanhTien; }
                 }
                 if (MaPX != "CDNL")
                 {
