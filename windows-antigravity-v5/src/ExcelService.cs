@@ -2374,7 +2374,19 @@ namespace CiscoLDTLApp
         /// 2. Nếu là file Bảng chấm công / Ăn ca / Điểm sản xuất từng người rời: tự động dò khớp theo Mã số SDB hoặc Họ và tên từng người trong ws.ListNhanVien,
         ///    cập nhật Công SP, Công phép lễ, Công học, Công BHXH, Công ăn ca, Điểm SX, Xếp loại và tự động cộng tổng lên Bảng nghiệm thu!
         /// </summary>
+        public static string ImportExternalExcelsToWorkshop(IEnumerable<string> filePaths,WorkshopData ws,string masterExcelPath=null,List<WorkshopData> workshops=null,Func<EmployeeRecord,EmployeeRecord> requestEmployee=null)
+        {
+            var files=new List<string>();var seen=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach(var file in filePaths){string path=Path.GetFullPath(file);if(seen.Add(path))files.Add(path);}
+            var session=TimesheetImporter.PrepareSession(files);var log=new StringBuilder();
+            foreach(var file in files)log.AppendLine("File ["+Path.GetFileName(file)+"]:").AppendLine(ImportExternalExcelCore(file,ws,masterExcelPath,workshops,requestEmployee,session));
+            log.Append(TimesheetImporter.TransferSummary(session));return log.ToString();
+        }
         public static string ImportExternalExcelToWorkshop(string externalFilePath, WorkshopData ws, string masterExcelPath = null, List<WorkshopData> workshops = null, Func<EmployeeRecord, EmployeeRecord> requestEmployee = null)
+        {
+            return ImportExternalExcelsToWorkshop(new[]{externalFilePath},ws,masterExcelPath,workshops,requestEmployee);
+        }
+        private static string ImportExternalExcelCore(string externalFilePath,WorkshopData ws,string masterExcelPath,List<WorkshopData> workshops,Func<EmployeeRecord,EmployeeRecord> requestEmployee,TimesheetImporter.ImportSession session)
         {
             if (!File.Exists(externalFilePath))
                 throw new FileNotFoundException("Không tìm thấy file: " + externalFilePath);
@@ -2383,7 +2395,7 @@ namespace CiscoLDTLApp
 
             // ƯU TIÊN: file công phân xưởng (Bảng công / QT ăn ca na-tt / Bảng BDĐH M1-M2-M3 / Bảng điểm)
             // -> trích từng người theo chuẩn HỌ TÊN + SỐ DANH BẠ (SDB), rồi cộng lên Tổ -> PX -> Bảng nghiệm thu.
-            string tsLog = TimesheetImporter.Import(externalFilePath, ws, workshops, requestEmployee);
+            string tsLog = TimesheetImporter.ImportCore(externalFilePath, ws, workshops, requestEmployee,session);
             if (!tsLog.StartsWith("- Không nhận diện được sheet"))
                 return tsLog;
 

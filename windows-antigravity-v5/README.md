@@ -1,3 +1,18 @@
+# Antigravity v5.14 — cộng gộp công người điều chuyển giữa các tổ
+
+Tải [antigravity_v5_14_program_only.zip](antigravity_v5_14_program_only.zip). Thay chương trình, giữ **Data**, **Templates** và Excel đang dùng. Tiêu đề **v5.14**, EXE **5.14.0.0**.
+
+- Nạp file công có nhiều dòng **cùng Họ tên + SDB**: cộng công SP, học/họp, VHTT, phép/lễ, BHXH, ca 3; cộng ăn ca nhà ăn/tiền mặt và công BDĐH từng mức. Giữ một người trong danh sách, không lấy dòng cuối thay các dòng trước.
+- Nếu các tổ gửi **nhiều tệp riêng**, chọn tất cả tệp cùng kỳ trong **một lần Nạp File** (Ctrl/Shift để chọn nhiều). Công của người làm nhiều tổ được cộng xuyên các tệp đó. Nạp lại cùng bộ tệp sẽ thay kết quả lần trước, không cộng chồng. Nếu chỉ nạp lại một tệp tổ, kết quả của người khớp sẽ lấy từ tệp vừa chọn; hãy chọn đủ các phần công cần cộng. Một đường dẫn được chọn lặp chỉ đọc một lần. Không chọn nhiều bản sao của cùng số liệu.
+- Điểm SX và điểm chia lương cộng theo từng dòng; điểm chia lương đã xếp loại không bị nhân xếp loại lần nữa. Không thay công thức quỹ riêng của bộ phận CĐNL.
+- Khi một người xuất hiện ở nhiều tổ, giữ tổ hồ sơ ban đầu để tránh tự chuyển bộ phận tính lương sang tổ ở dòng cuối. Nhật ký nạp ghi tên/SDB, số dòng đã gộp, các tổ nguồn và tổng công. Tổ nguồn đơn nhất tiếp tục cập nhật như trước. Số liệu tổng chỉ tính người đó một lần.
+- Giữ đối chiếu đồng thời tên và mã, nhận diện đuôi năm sinh; khác tên/mã hoặc năm sinh mâu thuẫn không tự gộp. Giữ bỏ qua sheet sàng phụ đã nằm trong bảng công chính. Giá trị 0 hợp lệ vẫn thay số cũ; thiếu cột công dừng trước khi nạp các tệp trong đợt.
+- Sau khi nạp, kiểm tra nhật ký và bảng nhân sự, chọn nguồn ăn ca như trước, **Lưu Excel**, rồi xuất/cập nhật Word. Giữ tính năng thêm người và bổ sung/giảm trừ quản lý có lý do ở v5.13.
+
+Kiểm tra gộp nhiều tổ trong cùng sheet, nhiều tệp, nạp lặp/đổi thứ tự, lưu–mở, công và điểm 0, khác mã không gộp; đối chiếu lại file công Luyện gang được cung cấp trên bản sao, không thay nguồn. Biên dịch .NET Framework 4.5, kiểm thử Linux/Mono; chưa chạy trực tiếp Windows. Gói không chứa dữ liệu người dùng.
+
+---
+
 # Antigravity v5.13 — thêm người, bổ sung / giảm trừ quản lý có lý do
 
 Tải [antigravity_v5_13_program_only.zip](antigravity_v5_13_program_only.zip). Đóng ứng dụng, giải nén và thay chương trình; giữ **Data**, **Templates** và tệp Excel đang dùng. Tiêu đề **v5.13**, EXE **5.13.0.0**.

@@ -93,5 +93,50 @@ class TimesheetLayoutTests
         }
         Check(Hash(source)==hash,"Original uploaded workbook unchanged");
     }
-    static int Main(string[] args){string dir=Path.Combine(Path.GetTempPath(),"layout-import-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(dir);try{Synthetic(dir);if(args.Length>0)Real(args[0],dir);}finally{Directory.Delete(dir,true);}Console.WriteLine("PASS: "+checks+" timesheet layout checks.");return 0;}
+    static Dictionary<string,XmlDocument> TransferPart(string team,double work,double points,string grade,double awarded,bool second=false)
+    {
+        var days=FixtureSheet(false,"Tổng công",work);Text(days,"B9",team);
+        var score=FixtureSheet(true);Num(score,"AJ10",points);Text(score,"AK10",grade);Num(score,"AM10",awarded);
+        var meals=Doc();Text(meals,"K2","Quyết toán ăn ca");Text(meals,"B6","Họ và tên");Text(meals,"C6","SBD");Text(meals,"E6","Ngày trong tháng");Text(meals,"AJ6","Tổng công được thanh toán ăn ca");
+        Text(meals,"B10","Nhân sự giả");Text(meals,"C10","901");Text(meals,"E10","na");Text(meals,"F10","tt");
+        var hazard=Doc();Text(hazard,"K2","Quyết toán bồi dưỡng độc hại");Text(hazard,"B6","Họ và tên");Text(hazard,"C6","SBD");Text(hazard,"E6","Ngày trong tháng");Text(hazard,"AJ6","Tổng công hưởng BDĐH");
+        Text(hazard,"B10","Nhân sự giả");Text(hazard,"C10","901");Text(hazard,"E10","M1,M2");Text(hazard,"F10","M3");
+        var result=new Dictionary<string,XmlDocument>{{"Bảng công "+team,days},{"Bảng điểm "+team,score},{"Ăn ca "+team,meals},{"BDĐH "+team,hazard}};
+        if(second) {
+            foreach(var doc in result.Values){Text(doc,"B11","Tổ chuyển đến");Text(doc,"B12","Nhân sự giả (1980)");Text(doc,"C12","0901");}
+            Num(days,"AJ12",16);Num(days,"AK12",2);Num(days,"AL12",3);Num(days,"AM12",4);Num(days,"AP12",9);Num(days,"AQ12",5);
+            Num(score,"AJ12",60);Text(score,"AK12","B");Num(score,"AM12",54);
+            Text(meals,"E12","tt");Text(meals,"F12","tt");Text(meals,"G12","na");
+            Text(hazard,"E12","M2,M3");Text(hazard,"F12","M3");
+        }
+        return result;
+    }
+    static void TransferTotals(WorkshopData w,EmployeeRecord e,double meals=5,double m1=1,double m2=2,double m3=3)
+    {
+        Eq(e.CongSP,26,"Transferred employee's product days sum across teams");Eq(e.CongHocHop,3,"Study days sum");Eq(e.CongVHTT,5,"VHTT days sum");Eq(e.CongLePhep,7,"Leave days sum");Eq(e.CongBHXH,9,"Social insurance days sum");Eq(e.CongK3,17,"Night shift days sum");
+        Eq(e.AnCaDonVi,meals,"Meal attendance sums instead of taking last row");Eq(e.BDDH_M1,m1,"M1 sums");Eq(e.BDDH_M2,m2,"M2 sums");Eq(e.BDDH_M3,m3,"M3 sums");Eq(e.TienBDDH,m1*13000+m2*20000+m3*26000,"Hazard pay recomputes from summed attendance");
+        Eq(e.DiemSanXuat,160,"Production points sum");Eq(e.HeSoHuong,149,"Already-graded points sum without applying final grade twice");
+        Check(w.ListNhanVien.Count==1,"Transfer never creates a second employee");Check(e.ToSanXuat=="Tổ hồ sơ","Multiple source teams retain employee's original payroll department");
+    }
+    static void Transfers(string dir)
+    {
+        string f=Path.Combine(dir,"transfer.xlsx");Workbook(f,TransferPart("Tổ A",10,100,"A",95,true));
+        var w=WorkshopData.CreateDefaultWorkshops()[1];var e=Fake();e.BoPhan=e.ToSanXuat="Tổ hồ sơ";w.ListNhanVien.Add(e);
+        string log=TimesheetImporter.Import(f,w);TransferTotals(w,e);Check(log.Contains("Đã cộng gộp 2 dòng công") && log.Contains("Tổ chuyển đến"),"Log explains merged identity, source teams and attendance");
+        TimesheetImporter.Import(f,w);TransferTotals(w,e);
+        string master=Path.Combine(dir,"transfer-master.xlsx");var emp=Doc();Text(emp,"C5",e.HoTen);Text(emp,"D5",e.SDB);Text(emp,"E5","CN");Num(emp,"G5",5200000);Num(emp,"K5",99);var company=Doc();Text(company,"C6",e.SDB);Text(company,"D6",e.HoTen);Num(company,"L6",99);
+        Workbook(master,new Dictionary<string,XmlDocument>{{"Gang",emp},{"Tổng hợp công",company}});var all=ExcelService.LoadWorkshopsFromExcel(master);all[1].ListNhanVien[0].BoPhan=all[1].ListNhanVien[0].ToSanXuat="Tổ hồ sơ";TimesheetImporter.Import(f,all[1]);
+        for(int pass=0;pass<2;pass++){ExcelService.SaveWorkshopsToExcel(master,all);all=ExcelService.LoadWorkshopsFromExcel(master);all[1].RecalculateFromEmployees(true);TransferTotals(all[1],all[1].ListNhanVien[0]);}
+        string a=Path.Combine(dir,"team-a.xlsx"),b=Path.Combine(dir,"team-b.xlsx");Workbook(a,TransferPart("Tổ A",10,100,"A",95));
+        var second=TransferPart("Tổ B",16,60,"B",54);var d=second["Bảng công Tổ B"];Num(d,"AK10",2);Num(d,"AL10",3);Num(d,"AM10",4);Num(d,"AP10",9);Num(d,"AQ10",5);Workbook(b,second);
+        log=ExcelService.ImportExternalExcelsToWorkshop(new[]{a,b,a},w);TransferTotals(w,e,4,2,2,2);Check(log.Contains("Đã cộng gộp 2 dòng công"),"UI batch import aggregates across files and ignores repeated same file path");
+        ExcelService.ImportExternalExcelsToWorkshop(new[]{b,a},w);TransferTotals(w,e,4,2,2,2);
+        // A single-file re-import replaces this employee's previous import, rather than adding to it.
+        TimesheetImporter.Import(a,w);Eq(e.CongSP,10,"A later import replaces previously imported attendance for matched employee");Eq(e.AnCaDonVi,2,"Re-import resets meal totals for matched employee");Eq(e.DiemSanXuat,100,"Re-import resets source point totals");
+        string invalid=Path.Combine(dir,"team-invalid.xlsx");Workbook(invalid,new Dictionary<string,XmlDocument>{{"Bảng công",FixtureSheet(false,"Cột không có công")}});
+        bool blocked=false;try{ExcelService.ImportExternalExcelsToWorkshop(new[]{b,invalid},w);}catch(ArgumentException){blocked=true;}Check(blocked && e.CongSP==10,"Validate all batch layouts before touching existing attendance");
+        string mismatch=Path.Combine(dir,"other-code.xlsx");var wrong=TransferPart("Tổ B",16,60,"B",54);foreach(var doc in wrong.Values)Text(doc,"C10","902");Workbook(mismatch,wrong);TimesheetImporter.Import(mismatch,w);Eq(e.CongSP,10,"Same name with different code never merges");Check(w.ListNhanVien.Count==1,"Code conflict creates no duplicate profile");
+        var zero=TransferPart("Tổ A",0,0,"A",0);foreach(var doc in zero.Values){Text(doc,"E10","");Text(doc,"F10","");}string clear=Path.Combine(dir,"zero.xlsx");Workbook(clear,zero);TimesheetImporter.Import(clear,w);Eq(e.CongSP,0,"Explicit zero clears aggregate days");Eq(e.AnCaDonVi,0,"Explicit zero clears aggregate meals");Eq(e.TienBDDH,0,"Explicit zero clears aggregate hazard pay");Eq(e.HeSoHuong,0,"Explicit zero clears aggregate points");
+    }
+    static int Main(string[] args){string dir=Path.Combine(Path.GetTempPath(),"layout-import-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(dir);try{Synthetic(dir);Transfers(dir);if(args.Length>0)Real(args[0],dir);}finally{Directory.Delete(dir,true);}Console.WriteLine("PASS: "+checks+" timesheet layout checks.");return 0;}
 }

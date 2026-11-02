@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.13";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.14";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.13)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.14)");
             crane.Click += (sender, args) => {
                 if (_workshops == null || _currentIndex < 0) return;
                 CommitAllGridEdits();
@@ -258,7 +258,7 @@ namespace CiscoLDTLApp
                 using (var form = new CranePayrollForm(ws))
                     if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
             };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.13)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.14)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -285,7 +285,7 @@ namespace CiscoLDTLApp
             payrollMenu.Items.Add(addPerson);
             payrollMenu.Items.Add(management);
             payrollMenu.Items.Add(crane);
-            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.13)");
+            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.14)");
             cdnl.Click+=(sender,args)=> {
                 if(_workshops==null || _currentIndex<0) return;
                 CommitAllGridEdits(); SaveUIToCurrentWorkshop(); var ws=_workshops[_currentIndex];
@@ -1820,11 +1820,7 @@ namespace CiscoLDTLApp
                     try
                     {
                         SaveUIToCurrentWorkshop();
-                        string totalLog = "";
-                        foreach (string f in ofd.FileNames)
-                        {
-                            totalLog += string.Format("File [{0}]:\n", Path.GetFileName(f)) + ExcelService.ImportExternalExcelToWorkshop(f, _workshops[_currentIndex], _excelFilePath, _workshops, RequestMissingEmployee) + "\n";
-                        }
+                        string totalLog = ExcelService.ImportExternalExcelsToWorkshop(ofd.FileNames,_workshops[_currentIndex],_excelFilePath,_workshops,RequestMissingEmployee);
                         LoadCurrentWorkshopToUI();
                         SetStatus(string.Format("Đã nạp dữ liệu chi tiết cho {0}.", _workshops[_currentIndex].TenPX));
                         MessageBox.Show(string.Format("Kết quả nạp dữ liệu vào {0}:\n\n{1}", _workshops[_currentIndex].TenPX, totalLog), "Nạp dữ liệu thành công", MessageBoxButtons.OK, MessageBoxIcon.Information);

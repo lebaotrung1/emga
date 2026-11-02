@@ -1,3 +1,13 @@
+# v5.14 — cộng gộp người có công ở nhiều tổ
+
+- `TimesheetLayoutTests`: thêm kiểm tra hai dòng cùng tên/mã ở hai tổ, mã có 0 đầu và đuôi năm sinh; công SP/học/VHTT/phép/BHXH/K3, ăn ca, BDĐH từng mức và tiền, điểm SX/chia lương đều cộng. Tổ hồ sơ được giữ khi nhiều tổ nguồn; chỉ một hồ sơ. Hai vòng lưu–mở giữ tổng đã gộp và điểm nguồn.
+- Nạp nhiều tệp qua API mà nút nạp giao diện sử dụng: cộng xuyên tệp, không lặp cùng đường dẫn, đổi thứ tự ổn định, nạp lại không cộng chồng, nạp riêng một tệp thay kết quả của người khớp. Kiểm tra thiếu cột ở tệp sau không làm nạp dở tệp trước; khác mã không gộp; số 0 thực sự xóa tổng cũ.
+- **3217** kiểm tra khi chạy cùng file công Luyện gang gốc: vẫn nhận đủ **142/142** dòng có công SP dương, đối chiếu công/điểm/ăn ca/BDĐH và lưu–mở. Nguồn gốc giữ nguyên hash; không đưa dữ liệu nguồn vào repo/gói.
+- `ImportNameMatchingTests`: **51** kiểm tra phân biệt tên, mã, năm sinh. `FrameworkCompatibilityTests` kiểm tra IL tại `ImportCore` sau tách bộ nạp theo đợt; giữ Split(char[], StringSplitOptions) tương thích .NET Framework 4.5 và kiểm tra BDĐH nhập lặp.
+- Không đổi schema `EmployeeRecord` hoặc công thức quỹ lương, không cộng các tệp với dữ liệu lần nạp cũ. Chạy trên Linux/Mono, chưa chạy trực tiếp Windows.
+
+---
+
 # v5.13 — thêm người và điều chỉnh quản lý theo từng nguyên nhân
 
 - `ManagementAcceptanceTests`: **341** kiểm tra dữ liệu giả; **358** khi chạy `--ui`; **666** khi truyền mẫu nghiệm thu công ty (chỉ ghi bản sao tạm, giữ nguyên hash nguồn). Có thêm hồ sơ quản lý và trưởng ca ở cả 5 PX, chặn trùng mã kể cả số 0 đầu, giữ công và hồ sơ qua 3 vòng lưu–mở.

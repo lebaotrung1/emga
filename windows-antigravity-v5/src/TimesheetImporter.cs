@@ -216,17 +216,55 @@ namespace CiscoLDTLApp
             return x == "" || x == "nam" || x == "nữ" || x == "tổng" || x == "cộng" || x == "tổng cộng";
         }
 
+        internal sealed class ImportSession
+        {
+            internal readonly HashSet<EmployeeRecord> Cong=new HashSet<EmployeeRecord>(), AnCa=new HashSet<EmployeeRecord>(), BDDH=new HashSet<EmployeeRecord>(), Diem=new HashSet<EmployeeRecord>();
+            internal readonly Dictionary<string,HashSet<string>> Years=new Dictionary<string,HashSet<string>>();
+            internal readonly Dictionary<EmployeeRecord,HashSet<string>> Teams=new Dictionary<EmployeeRecord,HashSet<string>>();
+            internal readonly Dictionary<EmployeeRecord,string> Home=new Dictionary<EmployeeRecord,string>();
+            internal readonly Dictionary<EmployeeRecord,int> Rows=new Dictionary<EmployeeRecord,int>();
+        }
+        internal static ImportSession PrepareSession(IEnumerable<string> files)
+        {
+            var session=new ImportSession();
+            foreach(string file in files)using(var fs=new FileStream(file,FileMode.Open,FileAccess.Read,FileShare.ReadWrite))using(var zip=new ZipArchive(fs,ZipArchiveMode.Read)) {
+                var ss=ExcelService.LoadSharedStrings(zip);var done=new HashSet<string>();
+                foreach(var kv in ExcelService.GetSheetMap(zip)) {
+                    if(!done.Add(kv.Value))continue;var doc=ExcelService.LoadSheetXml(zip,kv.Value);var lay=Detect(doc,ss);if(lay==null)continue;
+                    ValidateLayout(lay,kv.Key);
+                    if(lay.Kind==SheetKind.Cong && kv.Key.ToLowerInvariant().Contains("sàng"))continue;
+                    foreach(XmlElement row in doc.GetElementsByTagName("row","http://schemas.openxmlformats.org/spreadsheetml/2006/main")) {
+                        int r;if(!int.TryParse(row.GetAttribute("r"),out r)||r<=lay.HeaderRow)continue;
+                        string name=Cell(doc,ss,lay.NameCol,r),code=Cell(doc,ss,lay.SdbCol,r),year=BirthYear(name);if(code=="" || year=="")continue;
+                        string key=Key(code,name);HashSet<string> years;if(!session.Years.TryGetValue(key,out years)){years=new HashSet<string>();session.Years[key]=years;}years.Add(year);
+                    }
+                }
+            }
+            return session;
+        }
+        internal static string TransferSummary(ImportSession session)
+        {
+            var log=new StringBuilder();foreach(var p in session.Rows)if(p.Value>1) {
+                HashSet<string> teams;session.Teams.TryGetValue(p.Key,out teams);
+                log.AppendLine(string.Format("- Đã cộng gộp {0} dòng công: {1} (SDB {2}) = {3:N1} công SP; tổ nguồn: {4}. Tổ hồ sơ: {5}.",p.Value,p.Key.HoTen,p.Key.SDB,p.Key.CongSP,teams==null?"":string.Join("; ",new List<string>(teams).ToArray()),p.Key.ToSanXuat));
+            }
+            return log.ToString();
+        }
         public static string Import(string filePath, WorkshopData ws, List<WorkshopData> workshops = null, Func<EmployeeRecord, EmployeeRecord> requestEmployee = null)
+        {
+            var session=PrepareSession(new[]{filePath});return ImportCore(filePath,ws,workshops,requestEmployee,session)+TransferSummary(session);
+        }
+        internal static string ImportCore(string filePath, WorkshopData ws, List<WorkshopData> workshops, Func<EmployeeRecord,EmployeeRecord> requestEmployee,ImportSession session)
         {
             var log = new StringBuilder();
 
             var local=new EmployeeIndex();foreach(var e in ws.ListNhanVien)local.Add(e);
             var declined=new HashSet<string>();var external=new EmployeeIndex();
             if(workshops!=null) foreach(var unit in workshops) if(unit!=ws) foreach(var e in unit.ListNhanVien)external.Add(e);
-            var touchedCong = new HashSet<EmployeeRecord>();
-            var matchedCong = new HashSet<EmployeeRecord>();
-            var matchedAnCa = new HashSet<EmployeeRecord>();
-            var matchedBDDH = new HashSet<EmployeeRecord>();
+            var touchedCong = session.Cong;
+            var matchedCong = session.Cong;
+            var matchedAnCa = session.AnCa;
+            var matchedBDDH = session.BDDH;
             var warnings = new List<string>();
             int sheetsUsed = 0;
 
@@ -238,7 +276,7 @@ namespace CiscoLDTLApp
                 var done = new HashSet<string>();
 
                 var sheets=new List<ImportSheet>();
-                var sourceYears=new Dictionary<string,HashSet<string>>();
+                var sourceYears=session.Years;
                 foreach(var kv in map) {
                     if(!done.Add(kv.Value)) continue;
                     var doc=ExcelService.LoadSheetXml(zip,kv.Value);if(doc==null)continue;
@@ -330,7 +368,14 @@ namespace CiscoLDTLApp
                         }
                         if (lay.Kind == SheetKind.Cong && !string.IsNullOrWhiteSpace(currentTeam))
                         {
-                            emp.ToSanXuat = emp.BoPhan = currentTeam;
+                            HashSet<string> teams;
+                            if(!session.Teams.TryGetValue(emp,out teams)) {
+                                teams=new HashSet<string>(StringComparer.OrdinalIgnoreCase);session.Teams[emp]=teams;
+                                session.Home[emp]=string.IsNullOrWhiteSpace(emp.ToSanXuat)?emp.BoPhan:emp.ToSanXuat;
+                            }
+                            teams.Add(currentTeam);
+                            string team=teams.Count>1 && !string.IsNullOrWhiteSpace(session.Home[emp])?session.Home[emp]:currentTeam;
+                            emp.ToSanXuat = emp.BoPhan = team;
                             EmployeeClassification.Apply(emp);
                         }
                         ok++;
@@ -338,6 +383,7 @@ namespace CiscoLDTLApp
                         switch (lay.Kind)
                         {
                             case SheetKind.Cong:
+                                int count;session.Rows.TryGetValue(emp,out count);session.Rows[emp]=count+1;
                                 emp.AttendanceEdited=true;
                                 if (touchedCong.Add(emp))
                                 {
@@ -362,10 +408,11 @@ namespace CiscoLDTLApp
                                     if (v == "na") na++;
                                     else if (v == "tt") tt++;
                                 }
-                                emp.AnCaNhaAn = na;
-                                emp.AnCaTienMat = tt;
-                                emp.AnCaDonVi = na + tt;
-                                emp.CongAnCa = na + tt;
+                                if(matchedAnCa.Add(emp)) {emp.AnCaNhaAn=0;emp.AnCaTienMat=0;}
+                                emp.AnCaNhaAn += na;
+                                emp.AnCaTienMat += tt;
+                                emp.AnCaDonVi = emp.AnCaNhaAn + emp.AnCaTienMat;
+                                emp.CongAnCa = emp.AnCaDonVi;
                                 if (string.IsNullOrEmpty(emp.AnCaNguon)) emp.AnCaNguon = "CT";
                                 emp.TienAnCa = emp.CongAnCa * GiaAnCa;
                                 emp.CoAnCa = true;
@@ -386,8 +433,9 @@ namespace CiscoLDTLApp
                                         else if (x == "M3") m3++;
                                     }
                                 }
-                                emp.BDDH_M1 = m1; emp.BDDH_M2 = m2; emp.BDDH_M3 = m3;
-                                emp.TienBDDH = m1 * GiaM1 + m2 * GiaM2 + m3 * GiaM3;
+                                if(matchedBDDH.Add(emp)) {emp.BDDH_M1=emp.BDDH_M2=emp.BDDH_M3=0;}
+                                emp.BDDH_M1 += m1; emp.BDDH_M2 += m2; emp.BDDH_M3 += m3;
+                                emp.TienBDDH = emp.BDDH_M1 * GiaM1 + emp.BDDH_M2 * GiaM2 + emp.BDDH_M3 * GiaM3;
                                 emp.CoBDDH = true;
                                 matchedBDDH.Add(emp);
                                 break;
@@ -396,15 +444,12 @@ namespace CiscoLDTLApp
                                 double dsx=ExcelService.GetCellDouble(doc,ss,ColName(lay.CDiemSX)+r,double.NaN);
                                 double dh=lay.CDiemHuong>0?ExcelService.GetCellDouble(doc,ss,ColName(lay.CDiemHuong)+r,double.NaN):double.NaN;
                                 string xl=lay.CXepLoai>0?Cell(doc,ss,lay.CXepLoai,r).ToUpperInvariant():"";
-                                if(!double.IsNaN(dsx) && !double.IsInfinity(dsx))emp.DiemSanXuat=dsx;
-                                if(!double.IsNaN(dh) && !double.IsInfinity(dh))emp.HeSoHuong=dh;
-                                if(xl=="A" || xl=="B" || xl=="C")emp.XepLoai=xl;
-                                if(!emp.LaQuanLy && ws.MaPX!="CDNL" && !double.IsNaN(dsx) && !double.IsInfinity(dsx)) {
-                                    if(double.IsNaN(dh) || double.IsInfinity(dh)) {
-                                        string grade=(emp.XepLoai??"A").ToUpperInvariant();double factor=grade=="B"?0.9:grade=="C"?0.8:1;
-                                        emp.HeSoHuong=Math.Round(dsx*factor,2);
-                                    }
-                                    emp.ImportedPoints=new ImportedPointValues(emp);
+                                if(!double.IsNaN(dsx) && !double.IsInfinity(dsx)) {
+                                    if(xl!="A" && xl!="B" && xl!="C")xl=(emp.XepLoai??"A").ToUpperInvariant();
+                                    if(double.IsNaN(dh) || double.IsInfinity(dh))dh=Math.Round(dsx*(xl=="B"?0.9:xl=="C"?0.8:1),2);
+                                    if(session.Diem.Add(emp)){emp.DiemSanXuat=0;emp.HeSoHuong=0;}
+                                    emp.DiemSanXuat+=dsx;emp.HeSoHuong+=dh;emp.XepLoai=xl;
+                                    if(!emp.LaQuanLy && ws.MaPX!="CDNL")emp.ImportedPoints=new ImportedPointValues(emp);
                                 }
                                 break;
                         }

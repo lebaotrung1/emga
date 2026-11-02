@@ -14,7 +14,7 @@ class FrameworkCompatibilityTests
     { return "<c r='"+address+"' t='inlineStr'><is><t>"+System.Security.SecurityElement.Escape(value)+"</t></is></c>"; }
     static void VerifySplitReference()
     {
-        var method = typeof(TimesheetImporter).GetMethod("Import");
+        var method = typeof(TimesheetImporter).GetMethod("ImportCore",BindingFlags.NonPublic|BindingFlags.Static);
         byte[] il = method.GetMethodBody().GetILAsByteArray();
         var codes = new Dictionary<short, OpCode>();
         foreach (var field in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
@@ -47,7 +47,7 @@ class FrameworkCompatibilityTests
             offset+=size;
         }
         Check(found,"Expected String.Split call in importer");
-        Check(typeof(TimesheetImporter).Assembly.GetName().Version.ToString()=="5.13.0.0","Expected v5.13 binary");
+        Check(typeof(TimesheetImporter).Assembly.GetName().Version.ToString()=="5.14.0.0","Expected v5.14 binary");
     }
     static int Main()
     {
@@ -72,7 +72,7 @@ class FrameworkCompatibilityTests
             Check(employee.TienBDDH==105000,"BDDH amount");
             TimesheetImporter.Import(file,ws);
             Check(employee.BDDH_M1==1 && employee.BDDH_M2==2 && employee.BDDH_M3==2 && employee.TienBDDH==105000,"Repeated import is stable");
-            Console.WriteLine("PASS: v5.13 binary references Framework-compatible Split(char[], StringSplitOptions); synthetic BDDH import and repeat import.");
+            Console.WriteLine("PASS: v5.14 binary references Framework-compatible Split(char[], StringSplitOptions); synthetic BDDH import and repeat import.");
             return 0;
         }
         finally { Directory.Delete(dir,true); }
