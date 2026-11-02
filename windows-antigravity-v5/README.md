@@ -1,3 +1,15 @@
+# Antigravity v5.10 — nhận diện tên có năm sinh khi nạp công
+
+Tải [antigravity_v5_10_program_only.zip](antigravity_v5_10_program_only.zip). Đóng ứng dụng, thay EXE/launcher, giữ **Data** và **Templates**. Tiêu đề hiện **v5.10**, EXE **5.10.0.0**. Chọn đúng PX, nạp lại bảng công/ăn ca/BDĐH/điểm rồi **Lưu Excel** trên bản sao để kiểm tra.
+
+Bản cũ so nguyên văn họ tên nên tên có hậu tố `(1989)` trong file có thể không khớp hồ sơ không ghi năm sinh. Bản mới đối chiếu **tên + SDB**, hỗ trợ hậu tố năm sinh bốn chữ số ở cuối tên trong ngoặc, khoảng trắng và cách mã hóa dấu tiếng Việt. Chỉ bỏ qua phần năm sinh khi xác định được duy nhất một hồ sơ phù hợp; giữ nguyên tên/mã đã có trong hồ sơ, không thêm người trùng chỉ vì khác cách ghi năm sinh. Nếu hai bên đều có năm sinh thì phải tương thích. Hai hồ sơ cùng tên/mã cần năm sinh đủ để phân biệt; không chọn tùy ý hồ sơ đầu tiên.
+
+**Khác SDB vẫn không tự ghép.** Nhật ký sẽ nói rõ “tên có trong danh sách nhưng SDB khác” hoặc “SDB đang thuộc tên khác” để đối chiếu. Cần sửa mã ở file nguồn hoặc danh sách gốc cho đúng và thống nhất rồi nạp lại. Không suy mã bị đảo chữ số, không bỏ dấu để đoán tên, không bỏ mọi nội dung trong ngoặc. Nếu nhiều sheet ghi các năm sinh khác nhau cho cùng tên/mã nhưng hồ sơ không đủ thông tin, chương trình báo để tránh nhập chung công của hai người.
+
+Quy tắc áp dụng cho **công, ăn ca, BDĐH và điểm**, kể cả sao chép hồ sơ hợp lệ từ PX khác. Người mới thực sự vẫn có bước bổ sung hồ sơ như trước. Giữ các sửa đổi quản lý, lưu công, GNV cả 5 PX, cẩu phôi, CĐNL và Word. Đã kiểm tra bằng dữ liệu giả, gồm nạp lặp và lưu–mở Excel; ảnh lỗi dùng để xác định tình huống, chưa có tệp bảng công tương ứng để xác nhận từng dòng thực tế. Không đưa ảnh/danh sách nhân sự/Excel người dùng lên GitHub. Kiểm thử Linux/Mono với tham chiếu .NET Framework 4.5, chưa chạy trực tiếp Windows.
+
+---
+
 # Antigravity v5.9 — kiểm tra GNV cả 5 phân xưởng
 
 Tải [antigravity_v5_9_program_only.zip](antigravity_v5_9_program_only.zip). Đóng ứng dụng, thay EXE/launcher, giữ **Data** và **Templates**. Tiêu đề ứng dụng hiện **v5.9**, EXE **5.9.0.0**. Mở bản sao Excel còn danh sách GNV đầy đủ hoặc nạp lại GNV rồi **Lưu Excel**.

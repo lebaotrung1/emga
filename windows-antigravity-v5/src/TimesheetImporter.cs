@@ -49,7 +49,51 @@ namespace CiscoLDTLApp
             return Regex.Replace(s.Normalize(NormalizationForm.FormC).Trim(), @"\s+", " ").ToLowerInvariant();
         }
 
-        private static string Key(string sdb, string name) { return NormSdb(sdb) + "|" + NormName(name); }
+        private static string BirthYear(string name)
+        { return Regex.Match(NormName(name),@"\(\s*((?:19|20)\d{2})\s*\)\s*$").Groups[1].Value; }
+        private static string BaseName(string name)
+        { return Regex.Replace(NormName(name),@"\s*\(\s*(?:19|20)\d{2}\s*\)\s*$", "").Trim(); }
+        private static string Key(string sdb,string name) {return NormSdb(sdb)+"|"+BaseName(name);}
+        private static string ExactKey(string sdb,string name) {return Key(sdb,name)+"|"+BirthYear(name);}
+        private sealed class ImportSheet {internal string Key;internal XmlDocument Document;internal Layout Layout;}
+        private sealed class EmployeeIndex
+        {
+            readonly Dictionary<string,List<EmployeeRecord>> identities=new Dictionary<string,List<EmployeeRecord>>();
+            readonly Dictionary<string,List<EmployeeRecord>> names=new Dictionary<string,List<EmployeeRecord>>();
+            readonly Dictionary<string,List<EmployeeRecord>> codes=new Dictionary<string,List<EmployeeRecord>>();
+            static void AddTo(Dictionary<string,List<EmployeeRecord>> index,string key,EmployeeRecord e)
+            {List<EmployeeRecord> rows;if(!index.TryGetValue(key,out rows)) {rows=new List<EmployeeRecord>();index[key]=rows;}if(!rows.Contains(e))rows.Add(e);}
+            internal void Add(EmployeeRecord e) {AddTo(identities,TimesheetImporter.Key(e.SDB,e.HoTen),e);AddTo(names,BaseName(e.HoTen),e);AddTo(codes,NormSdb(e.SDB),e);}
+            internal EmployeeRecord Find(string code,string name,Dictionary<string,HashSet<string>> sourceYears,out string problem)
+            {
+                problem=null;List<EmployeeRecord> rows;
+                if(!identities.TryGetValue(TimesheetImporter.Key(code,name),out rows)) return null;
+                string year=BirthYear(name);HashSet<string> years;bool sourceAmbiguous=sourceYears.TryGetValue(TimesheetImporter.Key(code,name),out years) && years.Count>1;
+                var candidates=new List<EmployeeRecord>();
+                if(year!="") foreach(var e in rows) if(BirthYear(e.HoTen)==year)candidates.Add(e);
+                if(candidates.Count==0 && !(sourceAmbiguous && year=="")) foreach(var e in rows)
+                    if(year=="" || BirthYear(e.HoTen)=="")candidates.Add(e);
+                if(sourceAmbiguous && (year=="" || candidates.Count==1 && BirthYear(candidates[0].HoTen)==""))
+                    problem="file có nhiều năm sinh cho cùng Tên + SDB; hồ sơ chưa đủ thông tin để phân biệt";
+                else if(candidates.Count==1) return candidates[0];
+                else if(candidates.Count>1) problem="nhiều hồ sơ cùng Tên + SDB; cần phân biệt năm sinh/hồ sơ trước khi nạp";
+                else problem="năm sinh trong file và hồ sơ không khớp hoặc chưa đủ để phân biệt";
+                return null;
+            }
+            internal string Conflict(string code,string name)
+            {
+                List<EmployeeRecord> rows;
+                if(names.TryGetValue(BaseName(name),out rows)) {
+                    var values=new HashSet<string>();foreach(var e in rows)values.Add(e.SDB);
+                    return "tên có trong danh sách nhưng SDB khác: file "+code+", danh sách "+string.Join(", ",new List<string>(values).ToArray())+"; kiểm tra mã, không tự đổi SDB";
+                }
+                if(codes.TryGetValue(NormSdb(code),out rows)) {
+                    var values=new HashSet<string>();foreach(var e in rows)values.Add(e.HoTen);
+                    return "SDB "+code+" đang thuộc tên khác trong danh sách: "+string.Join(", ",new List<string>(values).ToArray())+"; kiểm tra họ tên và mã";
+                }
+                return null;
+            }
+        }
 
         private static string Cell(XmlDocument d, List<string> ss, int col, int row)
         {
@@ -147,20 +191,9 @@ namespace CiscoLDTLApp
         {
             var log = new StringBuilder();
 
-            var byKey = new Dictionary<string, EmployeeRecord>();
-            foreach (var e in ws.ListNhanVien)
-            {
-                string k = Key(e.SDB, e.HoTen);
-                if (!byKey.ContainsKey(k)) byKey[k] = e;
-            }
-
-            var declined = new HashSet<string>();
-            var external = new Dictionary<string, EmployeeRecord>();
-            if (workshops != null)
-                foreach (var unit in workshops)
-                    if (unit != ws)
-                        foreach (var e in unit.ListNhanVien)
-                            if (!external.ContainsKey(Key(e.SDB, e.HoTen))) external.Add(Key(e.SDB, e.HoTen), e);
+            var local=new EmployeeIndex();foreach(var e in ws.ListNhanVien)local.Add(e);
+            var declined=new HashSet<string>();var external=new EmployeeIndex();
+            if(workshops!=null) foreach(var unit in workshops) if(unit!=ws) foreach(var e in unit.ListNhanVien)external.Add(e);
             var touchedCong = new HashSet<EmployeeRecord>();
             var matchedCong = new HashSet<EmployeeRecord>();
             var matchedAnCa = new HashSet<EmployeeRecord>();
@@ -175,18 +208,25 @@ namespace CiscoLDTLApp
                 var ss = ExcelService.LoadSharedStrings(zip);
                 var done = new HashSet<string>();
 
-                foreach (var kv in map)
-                {
-                    if (!done.Add(kv.Value)) continue;
-                    var doc = ExcelService.LoadSheetXml(zip, kv.Value);
-                    if (doc == null) continue;
-                    Layout lay = Detect(doc, ss);
-                    if (lay == null) continue;
-                    if (lay.Kind == SheetKind.Cong && kv.Key.ToLowerInvariant().Contains("sàng"))
-                    {
-                        log.AppendLine(string.Format("- Sheet '{0}': bảng công chi tiết theo công đoạn phụ (đã nằm trong 'Bảng công' chính) -> không cộng thêm để tránh trùng.", kv.Key));
-                        continue;
+                var sheets=new List<ImportSheet>();
+                var sourceYears=new Dictionary<string,HashSet<string>>();
+                foreach(var kv in map) {
+                    if(!done.Add(kv.Value)) continue;
+                    var doc=ExcelService.LoadSheetXml(zip,kv.Value);if(doc==null)continue;
+                    var lay=Detect(doc,ss);if(lay==null)continue;
+                    if(lay.Kind==SheetKind.Cong && kv.Key.ToLowerInvariant().Contains("sàng")) {
+                        log.AppendLine(string.Format("- Sheet '{0}': bảng công chi tiết theo công đoạn phụ (đã nằm trong 'Bảng công' chính) -> không cộng thêm để tránh trùng.",kv.Key));continue;
                     }
+                    sheets.Add(new ImportSheet {Key=kv.Key,Document=doc,Layout=lay});
+                    foreach(XmlElement row in doc.GetElementsByTagName("row","http://schemas.openxmlformats.org/spreadsheetml/2006/main")) {
+                        int r;if(!int.TryParse(row.GetAttribute("r"),out r)||r<=lay.HeaderRow)continue;
+                        string name=Cell(doc,ss,lay.NameCol,r),code=Cell(doc,ss,lay.SdbCol,r),year=BirthYear(name);
+                        if(code=="" || year=="") continue;
+                        string key=Key(code,name);HashSet<string> years;if(!sourceYears.TryGetValue(key,out years)){years=new HashSet<string>();sourceYears[key]=years;}years.Add(year);
+                    }
+                }
+                foreach(var kv in sheets) {
+                    var doc=kv.Document;var lay=kv.Layout;
                     sheetsUsed++;
                     int rows = 0, ok = 0;
 
@@ -217,15 +257,18 @@ namespace CiscoLDTLApp
                         if (double.TryParse(name, out dummy)) continue;
                         rows++;
 
-                        EmployeeRecord emp;
-                        if (!byKey.TryGetValue(Key(sdb, name), out emp))
+                        string problem;EmployeeRecord emp=local.Find(sdb,name,sourceYears,out problem);
+                        if(problem!=null) {warnings.Add(string.Format("[{0}] dòng {1}: {2} (SDB {3}): {4} -> chưa nạp.",kv.Key,r,name,sdb,problem));continue;}
+                        if(emp==null)
                         {
-                            string identity = Key(sdb, name);
-                            if (declined.Contains(identity)) continue;
-                            EmployeeRecord source;
-                            external.TryGetValue(identity, out source);
+                            string identity=ExactKey(sdb,name);
+                            if(declined.Contains(identity))continue;
+                            problem=local.Conflict(sdb,name);
+                            if(problem!=null){warnings.Add(string.Format("[{0}] dòng {1}: {2} (SDB {3}): {4} -> chưa nạp.",kv.Key,r,name,sdb,problem));continue;}
+                            EmployeeRecord source=external.Find(sdb,name,sourceYears,out problem);
+                            if(problem!=null){warnings.Add(string.Format("[{0}] dòng {1}: {2} (SDB {3}): {4} -> chưa nạp.",kv.Key,r,name,sdb,problem));continue;}
                             var candidate = new EmployeeRecord {
-                                HoTen = name, SDB = sdb, BoPhan = currentTeam, ToSanXuat = currentTeam,
+                                HoTen = source==null?name:source.HoTen, SDB = source==null?sdb:source.SDB, BoPhan = currentTeam, ToSanXuat = currentTeam,
                                 DanhXung = source == null ? "ông" : source.DanhXung,
                                 ChucDanh = source == null ? "" : source.ChucDanh,
                                 MucLuongBHXH = source == null ? 0 : source.MucLuongBHXH,
@@ -245,7 +288,7 @@ namespace CiscoLDTLApp
                             EmployeeClassification.Apply(emp);
                             emp.STT = ws.ListNhanVien.Count + 1;
                             ws.ListNhanVien.Add(emp);
-                            byKey[identity] = emp;
+                            local.Add(emp);
                             log.AppendLine(string.Format("- {0}: {1} (SDB {2}), tổ {3}.", source == null ? "Đã thêm hồ sơ" : "Đã sao chép hồ sơ", name, sdb, emp.ToSanXuat));
                         }
                         if (lay.Kind == SheetKind.Cong && !string.IsNullOrWhiteSpace(currentTeam))

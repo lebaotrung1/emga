@@ -1,3 +1,12 @@
+# v5.10 — nhận diện năm sinh, giữ đúng Tên + SDB
+
+- `ImportNameMatchingTests`: 51 kiểm tra dữ liệu giả cho bốn loại sheet (công, ăn ca, BDĐH, điểm), năm sinh trong ngoặc hai chiều, khoảng trắng/NBSP/Unicode tổ hợp, SDB có số 0 đầu, không đổi tên/mã hồ sơ, không tạo người trùng, nạp lặp và các dòng công tách hợp lệ.
+- Phân biệt hai hồ sơ cùng tên/mã bằng năm sinh rõ ràng; chặn năm sinh mâu thuẫn, trùng hồ sơ, nhiều năm sinh trong nguồn khi hồ sơ chưa phân biệt được, cùng tên khác mã, cùng mã khác người và chú thích trong ngoặc không phải năm. Không ghi công người sai mã vào người có cùng SDB hợp lệ. Không vượt kiểm tra mã của PX hiện tại bằng cách tự sao chép hồ sơ PX khác.
+- Giữ luồng bổ sung hồ sơ người mới thực sự; sao chép hồ sơ PX khác dùng tên/mã chuẩn của hồ sơ nguồn và giữ nguyên công nguồn. Kiểm tra nạp–lưu–mở–nạp lặp và công/phép/K3 ở Tổng hợp công vẫn liên kết bằng danh tính gốc.
+- Hai script PowerShell thêm bài kiểm thử mới. Giữ các bài kiểm thử GNV cả 5 PX, nạp nhân sự, BDĐH/Framework, quản lý và lưu công, CĐNL. Tình huống ảnh được tái tạo bằng dữ liệu giả, không chép tên/mã nhân sự trong ảnh vào repo. Chưa có tệp công tạo ra ảnh để xác nhận từng dòng nguồn; chưa chạy trực tiếp Windows.
+
+---
+
 # v5.9 — GNV cả 5 phân xưởng
 
 - `AllWorkshopGnvExportTests`: 697 kiểm tra dữ liệu giả, gồm trực tiếp ô chi tiết/tổng trên 5 sheet NT và Word đủ danh sách; 454 kiểm tra khi chạy trên bản sao Excel nguồn. Các giới hạn và bảo vệ nhóm/vùng ghi xem `RA_SOAT_GNV.md`.

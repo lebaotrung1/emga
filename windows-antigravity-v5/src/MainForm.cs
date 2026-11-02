@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.9";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.10";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.9)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.10)");
             crane.Click += (sender, args) => {
                 if (_workshops == null || _currentIndex < 0) return;
                 CommitAllGridEdits();
@@ -258,7 +258,7 @@ namespace CiscoLDTLApp
                 using (var form = new CranePayrollForm(ws))
                     if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
             };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.9)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.10)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -274,7 +274,7 @@ namespace CiscoLDTLApp
             };
             payrollMenu.Items.Add(management);
             payrollMenu.Items.Add(crane);
-            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.9)");
+            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.10)");
             cdnl.Click+=(sender,args)=> {
                 if(_workshops==null || _currentIndex<0) return;
                 CommitAllGridEdits(); SaveUIToCurrentWorkshop(); var ws=_workshops[_currentIndex];
