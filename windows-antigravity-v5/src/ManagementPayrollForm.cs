@@ -10,8 +10,8 @@ namespace CiscoLDTLApp
     {
         private WorkshopData original, draft;
         private List<EmployeeRecord> originals = new List<EmployeeRecord>();
-        private DataGridView grid;
-        private NumericUpDown fund, adjustment, price1, price2;
+        private DataGridView grid, adjustments;
+        private NumericUpDown fund, price1, price2;
         private Label holidayPrice, productionResult;
         private Label summary;
         private BindingSource source;
@@ -20,7 +20,7 @@ namespace CiscoLDTLApp
         {
             EmployeeClassification.Apply(ws);
             original = ws;
-            draft = new WorkshopData { MaPX = ws.MaPX, LuongSPQL = ws.LuongSPQL, DieuChinhLuongQL = ws.DieuChinhLuongQL };
+            draft = new WorkshopData { MaPX = ws.MaPX, TenPX=ws.TenPX, LuongSPQL = ws.LuongSPQL, DieuChinhLuongQL = ws.DieuChinhLuongQL };
             draft.SanLuongLoai1 = ws.SanLuongLoai1;
             draft.SanLuongLoai2 = ws.SanLuongLoai2;
             draft.SanLuongLe = ws.SanLuongLe;
@@ -35,14 +35,22 @@ namespace CiscoLDTLApp
                     draft.ListNhanVien.Add(copy); originals.Add(e);
                 }
             Text = "Tính lương quản lý phân xưởng — " + ws.TenPX;
-            Size = new Size(1250, 700); MinimumSize = new Size(960, 580);
+            Size = new Size(1250, 900); MinimumSize = new Size(960, 760);
             StartPosition = FormStartPosition.CenterParent;
             Font = new Font("Segoe UI", 9);
             var top = new FlowLayoutPanel { Dock = DockStyle.Top, Height = 75, Padding = new Padding(8), AutoScroll = true };
             top.Controls.Add(new Label { Text = "Quỹ SP quản lý (đ)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
             fund = Money(0, false); fund.Enabled = false; fund.Maximum = 1000000000000000000000000000m; top.Controls.Add(fund);
-            top.Controls.Add(new Label { Text = "Điều chỉnh chung (+/−)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
-            adjustment = Money(ws.DieuChinhLuongQL, true); top.Controls.Add(adjustment);
+
+            var addPerson=new Button {Text="+ Thêm người quản lý",AutoSize=true};
+            addPerson.Click+=delegate {
+                if(!grid.EndEdit())return;source.EndEdit();
+                using(var dialog=new EmployeeEditorForm(draft,true))if(dialog.ShowDialog(this)==DialogResult.OK){
+                    try { EmployeeRoster.Validate(original.ListNhanVien,dialog.Employee); }
+                    catch(ArgumentException ex){MessageBox.Show(this,ex.Message,"Kiểm tra hồ sơ");return;}
+                    EmployeeRoster.Add(draft,dialog.Employee);var target=new EmployeeRecord();ManagementPayroll.Copy(dialog.Employee,target);originals.Add(target);source.ResetBindings(false);
+                }
+            };top.Controls.Add(addPerson);
             var calc = new Button { Text = "Tính / xem trước", AutoSize = true };
             calc.Click += (s,e) => Preview(false); top.Controls.Add(calc);
             var apply = new Button { Text = "Áp dụng vào bảng nghiệm thu", AutoSize = true };
@@ -106,12 +114,25 @@ namespace CiscoLDTLApp
             source = new BindingSource { DataSource = new BindingList<EmployeeRecord>(draft.ListNhanVien) };
             grid.DataSource = source;
             grid.DataError += (s,e) => { e.ThrowException = false; e.Cancel = true; MessageBox.Show("Giá trị không hợp lệ. Hãy nhập số theo định dạng của Windows; xếp loại A/B/C."); };
-            Controls.Add(grid); Controls.Add(note); Controls.Add(production); Controls.Add(top); Controls.Add(summary);
+            adjustments=new DataGridView {Dock=DockStyle.Fill,AutoGenerateColumns=false,AllowUserToAddRows=true,AllowUserToDeleteRows=true,RowHeadersVisible=true};
+            adjustments.Columns.Add(new DataGridViewTextBoxColumn {Name="Reason",HeaderText="Nguyên nhân",AutoSizeMode=DataGridViewAutoSizeColumnMode.Fill});
+            foreach(var col in new[]{"Bổ sung (đ)","Giảm trừ (đ)"}) adjustments.Columns.Add(new DataGridViewTextBoxColumn {HeaderText=col,Width=155,ValueType=typeof(double),DefaultCellStyle=new DataGridViewCellStyle {Format="N0"}});
+            foreach(var item in ws.ManagementAdjustments)adjustments.Rows.Add(item.Reason,item.Addition,item.Deduction);
+            if(!ws.ManagementAdjustmentsEdited && ws.ManagementAdjustments.Count==0 && ws.DieuChinhLuongQL!=0)
+                adjustments.Rows.Add("Điều chỉnh đã lưu từ phiên bản trước",Math.Max(0,ws.DieuChinhLuongQL),Math.Max(0,-ws.DieuChinhLuongQL));
+            adjustments.DataError+=(s,e)=>{e.ThrowException=false;e.Cancel=true;MessageBox.Show(this,"Nhập số tiền không âm theo định dạng Windows.");};
+            var changes=new GroupBox {Text="Bổ sung / Giảm trừ quản lý — nhập lý do và số tiền; chọn dòng rồi Delete để xóa",Dock=DockStyle.Bottom,Height=165,Padding=new Padding(6,20,6,6)};changes.Controls.Add(adjustments);
+            Controls.Add(grid); Controls.Add(changes); Controls.Add(note); Controls.Add(production); Controls.Add(top); Controls.Add(summary);
         }
         private static NumericUpDown Money(double value, bool signed)
         { return new NumericUpDown { Width = 155, Maximum = 1000000000000000m, Minimum = signed ? -1000000000000000m : 0, ThousandsSeparator = true, Value = (decimal)value }; }
         private void Add(string field, string title, bool readOnly = false, int width = 100)
         { grid.Columns.Add(new DataGridViewTextBoxColumn { DataPropertyName = field, HeaderText = title, ReadOnly = readOnly, Width = width }); }
+        private static double AdjustmentMoney(object value)
+        {
+            if(value==null || string.IsNullOrWhiteSpace(Convert.ToString(value)))return 0;
+            double n;if(!double.TryParse(Convert.ToString(value),System.Globalization.NumberStyles.Number,System.Globalization.CultureInfo.CurrentCulture,out n))throw new ArgumentException("Số tiền bổ sung / giảm trừ không hợp lệ.");return n;
+        }
         private void Preview(bool apply)
         {
             try
@@ -119,7 +140,13 @@ namespace CiscoLDTLApp
                 if (!grid.EndEdit()) return;
                 source.EndEdit();
                 if (draft.ListNhanVien.Count == 0) throw new ArgumentException("Phân xưởng chưa có người được đánh dấu quản lý. Bổ sung/chỉnh hồ sơ trước.");
-                draft.DieuChinhLuongQL = (double)adjustment.Value;
+                if(!adjustments.EndEdit())return;
+                var items=new List<ManagementAdjustment>();
+                foreach(DataGridViewRow row in adjustments.Rows) {
+                    if(row.IsNewRow)continue;double plus=AdjustmentMoney(row.Cells[1].Value),minus=AdjustmentMoney(row.Cells[2].Value);
+                    items.Add(new ManagementAdjustment { Reason=Convert.ToString(row.Cells[0].Value),Addition=plus,Deduction=minus });
+                }
+                ManagementPayroll.SetAdjustments(draft,items);
                 ManagementPayroll.Recalculate(draft);
                 source.ResetBindings(false);
                 double paid = 0, total = 0;
@@ -129,10 +156,10 @@ namespace CiscoLDTLApp
                 if (apply)
                 {
                     for (int i=0; i<originals.Count; i++)
-                    { draft.ListNhanVien[i].QuanLyTinhMoi = true; ManagementPayroll.Copy(draft.ListNhanVien[i], originals[i]); }
+                    { if(!original.ListNhanVien.Contains(originals[i]))draft.ListNhanVien[i].STT=original.ListNhanVien.Count+1; draft.ListNhanVien[i].QuanLyTinhMoi = true; ManagementPayroll.Copy(draft.ListNhanVien[i], originals[i]); if(!original.ListNhanVien.Contains(originals[i]))original.ListNhanVien.Add(originals[i]); }
                     ManagementProductionPayroll.CopySettings(draft, original);
                     original.LuongSPQL = draft.LuongSPQL; original.LuongCheDoQL = draft.LuongCheDoQL;
-                    original.DieuChinhLuongQL = draft.DieuChinhLuongQL;
+                    ManagementPayroll.SetAdjustments(original,draft.ManagementAdjustments);
                     original.ManualManagementOther=null; original.ManualManagementFund=false; original.ManagementSummaryEdited=true;
                     ManagementPayroll.Recalculate(original);
                     DialogResult = DialogResult.OK; Close();

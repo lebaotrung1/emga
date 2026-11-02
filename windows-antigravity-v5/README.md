@@ -1,3 +1,17 @@
+# Antigravity v5.13 — thêm người, bổ sung / giảm trừ quản lý có lý do
+
+Tải [antigravity_v5_13_program_only.zip](antigravity_v5_13_program_only.zip). Đóng ứng dụng, giải nén và thay chương trình; giữ **Data**, **Templates** và tệp Excel đang dùng. Tiêu đề **v5.13**, EXE **5.13.0.0**.
+
+- **Thêm người**: chọn phân xưởng, bấm **+ THÊM NGƯỜI** trên thanh menu. Nhập mã SDB, họ tên, tổ/bộ phận, chức danh, lương BHXH và hệ số. Sau đó nhập công tại bảng nhân sự hoặc nạp file công như trước, rồi **Lưu Excel**. Mã SDB trùng trong cùng PX (kể cả khác số 0 đầu mã) bị chặn. Hồ sơ mới lưu trong workbook, không cần tự chèn vào mẫu Excel; dòng XL = 0 là hồ sơ bổ sung và không ghi đè người cũ. Người thêm mới cần công/hệ số trước khi tính phân bổ lương. Cửa sổ lương quản lý cũng có **+ Thêm người quản lý**; người thêm tại đây chỉ ghi nhận khi **Áp dụng**.
+- **Bổ sung / Giảm trừ quản lý**: mở **Tính lương quản lý**, nhập bảng **Nguyên nhân | Bổ sung (đ) | Giảm trừ (đ)** phía dưới. Mỗi khoản một dòng, số tiền không âm; khoản có tiền phải có lý do. Chọn dòng và nhấn Delete để xóa. **Tính / xem trước → Áp dụng vào bảng nghiệm thu → Lưu Excel**.
+- Tổng quản lý = quỹ SP + ngoài SP + tổng bổ sung − tổng giảm trừ. Các khoản chung không tự chia cho từng cá nhân, không nhập lại vào phụ cấp hoặc tổng ngoài SP. Dòng 2.3 của bảng tổng hợp chuyển sang chỉ đọc sau khi có bảng điều chỉnh chi tiết; sửa qua cửa sổ quản lý để giữ nguyên nhân và tiền nhất quán. Điều chỉnh từ bản cũ được giữ thành dòng “Điều chỉnh đã lưu từ phiên bản trước”; hãy thay bằng lý do thực tế.
+- **Excel**: từng khoản được ghi vào phần chi tiết bổ sung/giảm trừ ở cuối sheet NT của PX, có số tiền và lý do; vùng in hiện có được mở rộng để gồm phần chi tiết. Tổng NT đã gồm các khoản này đúng một lần. Sheet **Dieu chinh QL v5** giữ dữ liệu để mở lại, kể cả khi tổng chênh lệch bằng 0 hoặc đã xóa toàn bộ khoản. Giữ các sheet dữ liệu v5 trong workbook.
+- **Word / xem trước**: ghi từng khoản bổ sung, giảm trừ và lý do dưới phần lương quản lý, cả báo cáo tháng và quý/lũy kế. Tiền tiếp tục ghi **triệu đồng, một số lẻ**. Sau khi áp dụng, xuất/cập nhật Word để ghi nhận thay đổi.
+
+Kiểm thử công thức, lưu–mở lặp, thêm người không trùng, điều chỉnh dương/âm/bằng 0, xóa khoản, lý do chứa ký tự XML, Word mọi loại kỳ và giao diện trên Linux/Mono với tham chiếu .NET Framework 4.5; chưa chạy trực tiếp Windows. Giữ nạp công, quy tắc quản lý QĐ/PQĐ/KTV/TK, GNV, cẩu phôi và công thức riêng từng bộ phận CĐNL. Gói chỉ chứa chương trình/mã nguồn/tài liệu, không có dữ liệu người dùng.
+
+---
+
 # Antigravity v5.12 — bổ sung lương quản lý cập nhật nghiệm thu
 
 Tải [antigravity_v5_12_program_only.zip](antigravity_v5_12_program_only.zip). Đóng ứng dụng, thay EXE/launcher và giữ **Data**, **Templates**. Tiêu đề hiện **v5.12**, EXE **5.12.0.0**. Kiểm tra trên bản sao Excel; nhập/áp dụng lại khoản chưa được lưu ở bản cũ rồi bấm **Lưu Excel**.

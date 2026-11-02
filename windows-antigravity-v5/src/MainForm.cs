@@ -59,7 +59,7 @@ namespace CiscoLDTLApp
 
         public MainForm()
         {
-            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.12";
+            Text = "PHẦN MỀM TỰ ĐỘNG HÓA NGHIỆM THU LAO ĐỘNG TIỀN LƯƠNG CHI TIẾT TỪNG NGƯỜI & XUẤT BIÊN BẢN WORD - CISCO (TKV) — v5.13";
             Size = new Size(1360, 870);
             StartPosition = FormStartPosition.CenterScreen;
             Font = new Font("Segoe UI", 9.5f, FontStyle.Regular);
@@ -248,7 +248,7 @@ namespace CiscoLDTLApp
             };
 
             var payrollMenu = new MenuStrip { Dock = DockStyle.Top };
-            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.12)");
+            var crane = new ToolStripMenuItem("LƯƠNG CẨU PHÔI PX THÉP (v5.13)");
             crane.Click += (sender, args) => {
                 if (_workshops == null || _currentIndex < 0) return;
                 CommitAllGridEdits();
@@ -258,7 +258,7 @@ namespace CiscoLDTLApp
                 using (var form = new CranePayrollForm(ws))
                     if (form.ShowDialog(this) == DialogResult.OK) { LoadCurrentWorkshopToUI(); RefreshPreview(); }
             };
-            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.12)");
+            var management = new ToolStripMenuItem("TÍNH LƯƠNG QUẢN LÝ PHÂN XƯỞNG (v5.13)");
             management.Click += (s, e) =>
             {
                 if (_workshops == null || _currentIndex < 0) return;
@@ -272,9 +272,20 @@ namespace CiscoLDTLApp
                         SetStatus("Đã áp dụng lương quản lý. Bấm Lưu Excel để lưu kết quả.");
                     }
             };
+            var addPerson = new ToolStripMenuItem("+ THÊM NGƯỜI");
+            addPerson.Click += (s,e) => {
+                if(_workshops==null || _currentIndex<0)return;
+                CommitAllGridEdits();SaveUIToCurrentWorkshop();var ws=_workshops[_currentIndex];
+                using(var dialog=new EmployeeEditorForm(ws,false)) if(dialog.ShowDialog(this)==DialogResult.OK) {
+                    EmployeeRoster.Add(ws,dialog.Employee);
+                    if(txtSearchEmp!=null)txtSearchEmp.Clear();if(chkOnlyAnCaDiff!=null)chkOnlyAnCaDiff.Checked=false;
+                    LoadCurrentWorkshopToUI();SetStatus("Đã thêm người. Nhập/nạp công và bấm Lưu Excel để lưu hồ sơ.");
+                }
+            };
+            payrollMenu.Items.Add(addPerson);
             payrollMenu.Items.Add(management);
             payrollMenu.Items.Add(crane);
-            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.12)");
+            var cdnl=new ToolStripMenuItem("TÍNH LƯƠNG CĐNL TỪNG BỘ PHẬN (v5.13)");
             cdnl.Click+=(sender,args)=> {
                 if(_workshops==null || _currentIndex<0) return;
                 CommitAllGridEdits(); SaveUIToCurrentWorkshop(); var ws=_workshops[_currentIndex];
@@ -1406,9 +1417,9 @@ namespace CiscoLDTLApp
                 dgvTienLuong.Rows[8].Cells[2].ToolTipText="Tổng tự tính từ quỹ SP + khoản ngoài SP + điều chỉnh chung. Nhập điều chỉnh tại dòng bên dưới.";
                 dgvTienLuong.Rows[9].Cells[2].ReadOnly=ws.TinhQuyQLTuSanLuong || ws.MaPX=="CDNL" && ws.Cdnl!=null && ws.Cdnl.Applied;
                 dgvTienLuong.Rows[9].Cells[2].ToolTipText=ws.TinhQuyQLTuSanLuong?"Sửa sản lượng/đơn giá trong cửa sổ lương quản lý để đổi quỹ này.":"Quỹ sản phẩm quản lý đã duyệt.";
-                dgvTienLuong.Rows[10].Cells[2].ReadOnly=false;dgvTienLuong.Rows[11].Cells[2].ReadOnly=false;
+                dgvTienLuong.Rows[10].Cells[2].ReadOnly=false;dgvTienLuong.Rows[11].Cells[2].ReadOnly=ws.ManagementAdjustmentsEdited;
                 dgvTienLuong.Rows[10].Cells[2].ToolTipText="Nhập tổng ngoài SP đã duyệt sẽ thay tổng tự cộng từ cá nhân; không tự chia lại cho từng người.";
-                dgvTienLuong.Rows[11].Cells[2].ToolTipText="Điều chỉnh chung được cộng/trừ một lần ở tổng quản lý; không tự phân bổ cho cá nhân.";
+                dgvTienLuong.Rows[11].Cells[2].ToolTipText="Sửa Bổ sung / Giảm trừ và nguyên nhân trong cửa sổ lương quản lý; tổng chỉ cộng/trừ một lần.";
             }
 
             _isLoadingUI = prevLoading;

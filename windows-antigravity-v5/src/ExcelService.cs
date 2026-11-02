@@ -689,6 +689,7 @@ namespace CiscoLDTLApp
             {
                 LoadAdditionalEmployees(zip, workshops);
                 LoadManagementSummaryInputs(zip,workshops);
+                LoadManagementAdjustments(zip,workshops);
                 LoadImportedPoints(zip,workshops);
                 LoadManagementProductionSettings(zip, workshops);
                 LoadCranePayroll(zip, workshops);
@@ -1302,6 +1303,7 @@ namespace CiscoLDTLApp
                 SaveAdditionalEmployees(zip, workshops);
                 SaveManagementProductionSettings(zip, workshops);
                 SaveCranePayroll(zip, workshops);
+                SaveManagementAdjustments(zip,workshops);
                 var managementLinks=SaveManagementPayrollReport(zip, workshops);
                 SaveCdnlPayroll(zip, workshops);
                 LinkManagementAcceptance(zip,managementLinks);
@@ -1761,6 +1763,114 @@ namespace CiscoLDTLApp
                 }
             }
         }
+        private const string AdjustmentSheet="Dieu chinh QL v5";
+        private const string AdjustmentMarker="CHI TIẾT BỔ SUNG / GIẢM TRỪ LƯƠNG QUẢN LÝ (v5)";
+        private static void SaveManagementAdjustments(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            bool edited=false;foreach(var ws in workshops)if(ws.ManagementAdjustmentsEdited)edited=true;
+            if(!edited)return;
+            string path=EnsureWorksheet(zip,AdjustmentSheet,"xl/worksheets/ciscoManagementAdjustments.xml");
+            var doc=new XmlDocument();doc.LoadXml("<worksheet xmlns='"+NsMain+"'><sheetData/></worksheet>");
+            string[] heads={"MaPX","DaSua","NguyenNhan","BoSung","GiamTru"};
+            for(int c=0;c<heads.Length;c++)SetCellInlineString(doc,TimesheetImporter.ColName(c+1)+"1",heads[c],false);
+            int r=2;foreach(var ws in workshops) {
+                if(!ws.ManagementAdjustmentsEdited)continue;
+                SetCellInlineString(doc,"A"+r,ws.MaPX,false);SetCellInlineString(doc,"B"+r,"True",false);r++;
+                foreach(var item in ws.ManagementAdjustments) {
+                    SetCellInlineString(doc,"A"+r,ws.MaPX,false);SetCellInlineString(doc,"B"+r,"True",false);
+                    SetCellInlineString(doc,"C"+r,item.Reason,false);SetCellNumeric(doc,"D"+r,item.Addition,false);SetCellNumeric(doc,"E"+r,item.Deduction,false);r++;
+                }
+            }
+            SaveSheetXml(zip,path,doc);
+        }
+        private static void LoadManagementAdjustments(ZipArchive zip,List<WorkshopData> workshops)
+        {
+            string path;var map=GetSheetMap(zip);if(!map.TryGetValue(AdjustmentSheet,out path))return;
+            var doc=LoadSheetXml(zip,path);var strings=LoadSharedStrings(zip);
+            foreach(var ws in workshops) {
+                bool found=false;var items=new List<ManagementAdjustment>();
+                foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)) {
+                    int r;if(!int.TryParse(row.GetAttribute("r"),out r)||r<2 || GetCellString(doc,strings,"A"+r)!=ws.MaPX || GetCellString(doc,strings,"B"+r)!="True")continue;
+                    found=true;items.Add(new ManagementAdjustment {Reason=GetCellString(doc,strings,"C"+r),Addition=GetCellDouble(doc,strings,"D"+r,0),Deduction=GetCellDouble(doc,strings,"E"+r,0)});
+                }
+                if(found){ManagementPayroll.SetAdjustments(ws,items);ws.RecalculateDerived();}
+            }
+        }
+        private static int ManagementAdjustmentStyle(ZipArchive zip,bool money)
+        {
+            if(zip.GetEntry("xl/styles.xml")==null)return -1;
+            var doc=LoadSheetXml(zip,"xl/styles.xml");var xfs=FindChild(doc.DocumentElement,"cellXfs") as XmlElement;if(xfs==null)return -1;
+            int i=0;string number=money?"3":"0";
+            foreach(XmlElement xf in xfs.ChildNodes) {
+                var align=FindChild(xf,"alignment") as XmlElement;
+                if(xf.GetAttribute("numFmtId")==number && xf.GetAttribute("fontId")=="0" && xf.GetAttribute("fillId")=="0" && xf.GetAttribute("borderId")=="0" && align!=null && align.GetAttribute("wrapText")=="1")return i;
+                i++;
+            }
+            var style=doc.CreateElement("xf",NsMain);style.SetAttribute("numFmtId",number);style.SetAttribute("fontId","0");style.SetAttribute("fillId","0");style.SetAttribute("borderId","0");style.SetAttribute("xfId","0");style.SetAttribute("applyAlignment","1");style.SetAttribute("applyNumberFormat","1");
+            var alignment=doc.CreateElement("alignment",NsMain);alignment.SetAttribute("wrapText","1");alignment.SetAttribute("vertical","center");style.AppendChild(alignment);xfs.AppendChild(style);xfs.SetAttribute("count",xfs.ChildNodes.Count.ToString());
+            SaveSheetXml(zip,"xl/styles.xml",doc);return i;
+        }
+        private static void WriteManagementAdjustmentLines(ZipArchive zip,XmlDocument doc,WorkshopData ws)
+        {
+            if(!ws.ManagementAdjustmentsEdited)return;
+            var strings=LoadSharedStrings(zip);var remove=new List<XmlElement>();int start=0,count=0;
+            foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)) {
+                int r;if(!int.TryParse(row.GetAttribute("r"),out r))continue;
+                if(GetCellString(doc,strings,"A"+r)==AdjustmentMarker){start=r;count=(int)GetCellDouble(doc,strings,"L"+r,0)+3;break;}
+            }
+            foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)) {
+                int r;if(start>0 && int.TryParse(row.GetAttribute("r"),out r) && r>=start && r<start+count)remove.Add(row);
+            }
+            foreach(var row in remove)row.ParentNode.RemoveChild(row);
+            if(remove.Count>0)_sheetCache.Remove(doc);
+            var merges=FindChild(doc.DocumentElement,"mergeCells") as XmlElement;
+            if(merges!=null && start>0) {
+                var stale=new List<XmlNode>();foreach(XmlElement merge in merges.ChildNodes) {
+                    var m=System.Text.RegularExpressions.Regex.Match(merge.GetAttribute("ref"),@"^[A-Z]+([0-9]+):");
+                    if(m.Success && int.Parse(m.Groups[1].Value)>=start && int.Parse(m.Groups[1].Value)<start+count)stale.Add(merge);
+                }
+                foreach(var merge in stale)merges.RemoveChild(merge);merges.SetAttribute("count",merges.ChildNodes.Count.ToString());
+            }
+            if(ws.ManagementAdjustments.Count==0)return;
+            int last=0;foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain)){int r;if(int.TryParse(row.GetAttribute("r"),out r))last=Math.Max(last,r);}
+            int first=last+3;SetCellInlineString(doc,"A"+first,AdjustmentMarker,false);SetCellNumeric(doc,"L"+first,ws.ManagementAdjustments.Count,false);
+            SetCellInlineString(doc,"A"+(first+1),"Nguyên nhân — tháng "+ws.Thang+"/"+ws.Nam,false);
+            SetCellInlineString(doc,"E"+(first+1),"Bổ sung (đ)",false);SetCellInlineString(doc,"G"+(first+1),"Giảm trừ (đ)",false);SetCellInlineString(doc,"I"+(first+1),"Chênh lệch (đ)",false);
+            int line=first+2;double plus=0,minus=0;
+            foreach(var item in ws.ManagementAdjustments) {
+                SetCellInlineString(doc,"A"+line,item.Reason,false);SetCellNumeric(doc,"E"+line,item.Addition,false);SetCellNumeric(doc,"G"+line,item.Deduction,false);
+                SetCraneFormula(doc,"I"+line,"E"+line+"-G"+line,item.Addition-item.Deduction);plus+=item.Addition;minus+=item.Deduction;line++;
+            }
+            SetCellInlineString(doc,"A"+line,"TỔNG ĐIỀU CHỈNH QL (đã tính trong tổng lương quản lý)",false);
+            SetCellNumeric(doc,"E"+line,plus,false);SetCellNumeric(doc,"G"+line,minus,false);SetCellNumeric(doc,"I"+line,plus-minus,false);
+            if(merges==null) {
+                merges=doc.CreateElement("mergeCells",NsMain);
+
+                // mergeCells follows page/break/protection metadata, and precedes print/page metadata.
+                XmlNode before=null;foreach(XmlNode child in doc.DocumentElement.ChildNodes)if(Array.IndexOf(new[]{"phoneticPr","conditionalFormatting","dataValidations","hyperlinks","printOptions","pageMargins","pageSetup","headerFooter","rowBreaks","colBreaks","drawing","legacyDrawing","extLst"},child.LocalName)>=0){before=child;break;}
+                if(before!=null)doc.DocumentElement.InsertBefore(merges,before);else doc.DocumentElement.AppendChild(merges);
+            }
+            int textStyle=ManagementAdjustmentStyle(zip,false),moneyStyle=ManagementAdjustmentStyle(zip,true);
+            for(int r=first;r<=line;r++) {
+                string range=r==first?"A"+r+":I"+r:"A"+r+":D"+r;
+                var merge=doc.CreateElement("mergeCell",NsMain);merge.SetAttribute("ref",range);merges.AppendChild(merge);
+                foreach(XmlElement row in doc.GetElementsByTagName("row",NsMain))if(row.GetAttribute("r")==r.ToString()){row.SetAttribute("ht",Math.Max(30,Math.Ceiling(GetCellString(doc,strings,"A"+r).Length/45.0)*16).ToString(CultureInfo.InvariantCulture));row.SetAttribute("customHeight","1");
+                    foreach(XmlElement cell in row.GetElementsByTagName("c",NsMain)) {
+                        int style=cell.GetAttribute("r").StartsWith("A")?textStyle:moneyStyle;if(style>=0)cell.SetAttribute("s",style.ToString());
+                    }break;}
+            }
+            merges.SetAttribute("count",merges.ChildNodes.Count.ToString());
+            var dimension=FindChild(doc.DocumentElement,"dimension") as XmlElement;
+            if(dimension!=null)dimension.SetAttribute("ref","A1:L"+line);
+            // Keep existing print ranges wide enough to include the appended detail block.
+            var wb=LoadSheetXml(zip,"xl/workbook.xml");int sheetIndex=-1,index=0;
+            foreach(XmlElement sheet in wb.GetElementsByTagName("sheet",NsMain)){if(sheet.GetAttribute("name").Trim()==ws.SheetNT.Trim())sheetIndex=index;index++;}
+            foreach(XmlElement defined in wb.GetElementsByTagName("definedName",NsMain))if(defined.GetAttribute("name")=="_xlnm.Print_Area" && defined.GetAttribute("localSheetId")==sheetIndex.ToString()) {
+                defined.InnerText=System.Text.RegularExpressions.Regex.Replace(defined.InnerText,@"(:\$?[A-Z]+\$?)([0-9]+)",m=>m.Groups[1].Value+Math.Max(line,int.Parse(m.Groups[2].Value)).ToString());
+            }
+            SaveSheetXml(zip,"xl/workbook.xml",wb);
+        }
+
         private static void MaterializePayrollShared(XmlDocument doc,string sheet,PayrollFormulaBook book)
         {
             foreach(XmlElement cell in doc.GetElementsByTagName("c",NsMain)) {
@@ -1784,6 +1894,7 @@ namespace CiscoLDTLApp
                 if(ManagementPayroll.IsApplied(ws) || ws.ManualManagementFund)SetCraneFormula(doc,product,source+"C"+r,ws.LuongSPQL);
                 if(ManagementPayroll.IsApplied(ws) || ws.ManualManagementOther.HasValue)SetCraneFormula(doc,other,source+"F"+r,ws.LuongCheDoQL);
                 SetCraneFormula(doc,total,source+"C"+r+"+"+source+"F"+r+"+"+source+"G"+r,ws.TongLuongQL);
+                WriteManagementAdjustmentLines(zip,doc,ws);
                 SaveSheetXml(zip,path,doc);
                 string empPath;if(!map.TryGetValue(ws.SheetBangCong,out empPath))continue;
                 var empDoc=LoadSheetXml(zip,empPath);MaterializePayrollShared(empDoc,ws.SheetBangCong,formulaBook);bool cdnl=ws.MaPX=="CDNL";

@@ -240,6 +240,8 @@ namespace CiscoLDTLApp
 
         // Danh sách chi tiết từng người lao động trong phân xưởng
         public List<EmployeeRecord> ListNhanVien { get; set; }
+        public List<ManagementAdjustment> ManagementAdjustments = new List<ManagementAdjustment>();
+        public bool ManagementAdjustmentsEdited;
 
         // Thông tin chung biên bản
         public int Thang { get; set; }
@@ -803,6 +805,9 @@ namespace CiscoLDTLApp
             LuongCheDoTT = LuongLePhepTT + LuongHocHopTT + LuongVHTTTT;
             TongLuongTT = LuongSPTT + LuongCVKhac + LuongCheDoTT + LuongTDT + TruLuong;
             if(ManualManagementOther.HasValue)LuongCheDoQL=ManualManagementOther.Value;
+            if(ManagementAdjustmentsEdited) {
+                DieuChinhLuongQL=0;foreach(var item in ManagementAdjustments)DieuChinhLuongQL+=item.Addition-item.Deduction;
+            }
             TongLuongQL = LuongSPQL + LuongCheDoQL + DieuChinhLuongQL;
             TongLuongToanPX = TongLuongTT + TongLuongQL;
 

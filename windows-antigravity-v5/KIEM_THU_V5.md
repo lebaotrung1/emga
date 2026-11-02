@@ -1,3 +1,14 @@
+# v5.13 — thêm người và điều chỉnh quản lý theo từng nguyên nhân
+
+- `ManagementAcceptanceTests`: **341** kiểm tra dữ liệu giả; **358** khi chạy `--ui`; **666** khi truyền mẫu nghiệm thu công ty (chỉ ghi bản sao tạm, giữ nguyên hash nguồn). Có thêm hồ sơ quản lý và trưởng ca ở cả 5 PX, chặn trùng mã kể cả số 0 đầu, giữ công và hồ sơ qua 3 vòng lưu–mở.
+- Bảng điều chỉnh tách nguyên nhân / bổ sung / giảm trừ; kiểm tra bắt buộc lý do, tiền không âm, sửa không hợp lệ không làm mất bản cũ. Tổng NT/tổng PX tính đúng; tiền bù và trừ không cộng lặp. Hai khoản đối trừ bằng nhau vẫn còn chi tiết; xóa khoản cuối không khôi phục tiền cũ. Ghi chi tiết vào sheet NT, thay phần chi tiết cũ khi lưu lại, giữ công thức người cũ và dữ liệu GNV.
+- Word/xem trước: đủ cả hai loại khoản, lý do có `&`/`<` và tiền triệu đồng một số lẻ ở mọi loại kỳ tháng/quý/lũy kế. XML Word hợp lệ.
+- Giao diện: chuyển điều chỉnh cũ thành dòng có lý do; xem trước không đổi dữ liệu gốc; thêm quản lý giữ ở bản nháp đến khi Áp dụng; hai cột số tiền áp dụng vào tổng và lưu lại. Kiểm thử menu quản lý, áp dụng/hủy và mở cửa sổ chính đã qua.
+- Hồi quy CĐNL: **266** kiểm tra với nguồn công ty, giữ công thức riêng từng bộ phận và điều chỉnh quản lý đúng một lần. Kiểm tra binary **5.13.0.0** tương thích .NET Framework 4.5 và bài nhập BDĐH lặp đã qua. Biên dịch với tham chiếu Microsoft .NET Framework 4.5, chạy Linux/Mono; chưa chạy trực tiếp Windows.
+- Không thêm public property vào `EmployeeRecord`, tránh làm lệch snapshot/quỹ của bản trước. Người mới có ExcelRow = 0, lưu trong sheet hồ sơ v5 và không ghi đè dòng Excel cũ. Gói không chứa nguồn Excel, Word hoặc danh tính người dùng.
+
+---
+
 # v5.12 — tổng quản lý và khoản bổ sung được ghi bền vào nghiệm thu
 
 - `ManagementAcceptanceTests`: 161 kiểm tra dữ liệu giả cho 5 PX, 172 khi thêm giao diện, 306 khi thêm bản sao Excel nguồn. Kiểm tra trực tiếp công thức NT/thu nhập cá nhân/tổng PX sau tính lại, sửa làm lễ/phụ cấp/delta về 0, điều chỉnh âm, ba vòng lưu–mở, giữ công thức dùng chung của dòng trực tiếp khi thay ô neo quản lý. Giao diện kiểm tra nhập tổng ngoài SP, quỹ duyệt và delta không cần áp dụng cửa sổ trước, tổng tháng đổi cả khi tắt lũy kế tự động; áp dụng chi tiết thay tổng ngoài SP riêng nhưng giữ quỹ duyệt chưa có đơn giá và delta.

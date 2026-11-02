@@ -47,6 +47,16 @@ namespace CiscoLDTLApp
             }
         }
 
+        public static List<string> ManagementAdjustmentLines(WorkshopData ws)
+        {
+            var lines=new List<string>();
+            foreach(var item in ws.ManagementAdjustments) {
+                if(item.Addition>0)lines.Add("Bổ sung lương quản lý tháng "+ws.Thang+": "+FmtMoney(item.Addition)+" triệu đồng. Nguyên nhân: "+item.Reason+".");
+                if(item.Deduction>0)lines.Add("Giảm trừ lương quản lý tháng "+ws.Thang+": "+FmtMoney(item.Deduction)+" triệu đồng. Nguyên nhân: "+item.Reason+".");
+            }
+            return lines;
+        }
+
         public static string FmtMoney(double dong)
         {
             decimal millions = (decimal)dong / 1000000m;
@@ -168,6 +178,8 @@ namespace CiscoLDTLApp
                 sb.AppendLine(string.Format("    + Lương sản phẩm QL: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.LuongSPQL), tenQuy, FmtMoney(ws.KyQuy.LuongSPQL), tenLK, FmtMoney(ws.KyLuyKe.LuongSPQL)));
                 sb.AppendLine(string.Format("    + Lương chế độ QL: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4}: {5} triệu đồng.", ws.Thang, FmtMoney(ws.LuongCheDoQL), tenQuy, FmtMoney(ws.KyQuy.LuongCheDoQL), tenLK, FmtMoney(ws.KyLuyKe.LuongCheDoQL)));
             }
+
+            foreach(var line in ManagementAdjustmentLines(ws))sb.AppendLine("    + "+line);
 
             if (ws.ListGNV != null && ws.ListGNV.Count > 0)
             {
@@ -524,6 +536,8 @@ namespace CiscoLDTLApp
                 body.Append(P(string.Format("• Tiền lương theo sản phẩm QL: Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng;", ws.Thang, FmtMoney(ws.LuongSPQL), tenQuy, FmtMoney(ws.KyQuy.LuongSPQL), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongSPQL)), false, false, "both", 20, 20, 26, 720));
                 body.Append(P(string.Format("• Tiền lương chế độ QL (phép, học, lễ): Tháng {0}: {1} triệu đồng; {2}: {3} triệu đồng; {4} năm {5}: {6} triệu đồng.", ws.Thang, FmtMoney(ws.LuongCheDoQL), tenQuy, FmtMoney(ws.KyQuy.LuongCheDoQL), tenLK, ws.Nam, FmtMoney(ws.KyLuyKe.LuongCheDoQL)), false, false, "both", 20, 20, 26, 720));
             }
+
+            foreach(var line in ManagementAdjustmentLines(ws))body.Append(P("• "+line,false,false,"both",20,20,26,720));
 
             // Bảng chi tiết GNV nếu có
             if (ws.ListGNV != null && ws.ListGNV.Count > 0)

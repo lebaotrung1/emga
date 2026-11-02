@@ -64,6 +64,53 @@ class ManagementAcceptanceTests
         foreach(var w in all){w.DieuChinhLuongQL=-65432;foreach(var e in w.ListNhanVien)if(e.LaQuanLy){e.LuongLamLe=0;e.PhuCapTien=0;e.CongLePhep=e.CongHocHop=e.CongVHTT=0;}ManagementPayroll.Recalculate(w);}ExcelService.SaveWorkshopsToExcel(file,all);Verify(file,all,true);
         all=ExcelService.LoadWorkshopsFromExcel(file);foreach(var w in all){w.DieuChinhLuongQL=0;ManagementPayroll.Recalculate(w);}ExcelService.SaveWorkshopsToExcel(file,all);Verify(file,all,true);
     }
+    static void Changes(string file,string dir)
+    {
+        var all=ExcelService.LoadWorkshopsFromExcel(file);var counts=new Dictionary<string,int>();
+        foreach(var w in all) {
+            counts[w.MaPX]=w.ListNhanVien.Count+2;
+            var manager=new EmployeeRecord {SDB="99001",HoTen="Người quản lý mới giả",ToSanXuat="Quản lý PX",ChucDanh="TK",HeSoCoDinh=1,MucLuongBHXH=5200000,CongSP=26};
+            EmployeeRoster.Add(w,manager);manager.QuanLyTinhMoi=true;
+            EmployeeRoster.Add(w,new EmployeeRecord {SDB="99002",HoTen="Trưởng ca mới giả",ToSanXuat="Tổ mới",ChucDanh="Tr.ca",HeSoCoDinh=1,CongSP=26});
+            bool duplicate=false;try{EmployeeRoster.Add(w,new EmployeeRecord {SDB="099001",HoTen="Trùng mã giả",ToSanXuat="Tổ mới",ChucDanh="CN"});}catch(ArgumentException){duplicate=true;}
+            Check(duplicate && w.ListNhanVien.Count==counts[w.MaPX],"Duplicate zero-padded SDB rejected without adding a row: "+w.MaPX);
+            Check(manager.LaQuanLy && !w.ListNhanVien.Last().LaQuanLy && manager.ExcelRow==0,"New management classified by role and cannot overwrite source employee row: "+w.MaPX);
+            ManagementPayroll.SetAdjustments(w,new[]{new ManagementAdjustment {Reason="Bù chênh lệch & bổ sung <tháng>",Addition=1200000},new ManagementAdjustment {Reason="Giảm do nghỉ",Deduction=350000}});
+            ManagementPayroll.Recalculate(w);Check(w.DieuChinhLuongQL==850000,"Separate positive and negative amounts net exactly once");
+            double before=w.DieuChinhLuongQL;bool rejected=false;try{ManagementPayroll.SetAdjustments(w,new[]{new ManagementAdjustment {Addition=2}});}catch(ArgumentException){rejected=true;}
+            Check(rejected && w.DieuChinhLuongQL==before && w.ManagementAdjustments.Count==2,"Reason required; invalid edit cannot discard old details");
+            rejected=false;try{ManagementPayroll.SetAdjustments(w,new[]{new ManagementAdjustment {Reason="x",Deduction=-1}});}catch(ArgumentException){rejected=true;}Check(rejected,"Negative deduction rejected");
+            foreach(LoaiKyBaoCao period in Enum.GetValues(typeof(LoaiKyBaoCao))) {
+                w.LoaiKy=period;var text=WordReportService.GeneratePreviewText(w);
+                Check(text.Contains("Bổ sung lương quản lý") && text.Contains("1,2 triệu đồng") && text.Contains("Giảm do nghỉ"),"Preview includes amount, direction and reason in all periods");
+                string word=Path.Combine(dir,"changes-"+w.MaPX+".docx");WordReportService.ExportWordDocx(w,word);
+                using(var z=ZipFile.OpenRead(word))using(var reader=new StreamReader(z.GetEntry("word/document.xml").Open())){var doc=new XmlDocument();doc.LoadXml(reader.ReadToEnd());Check(doc.InnerText.Contains("Giảm trừ lương quản lý") && doc.InnerText.Contains("0,4 triệu đồng") && doc.InnerText.Contains("Bù chênh lệch & bổ sung <tháng>"),"DOCX escapes reason and includes both amounts with one decimal");}
+            }
+        }
+        for(int pass=0;pass<3;pass++) {
+            ExcelService.SaveWorkshopsToExcel(file,all);Verify(file,all,false,null,false);
+            using(var z=ZipFile.OpenRead(file)) {
+                var book=PayrollFormulaBook.Load(z);foreach(var spec in Specs) {
+
+                    // Inspect XML independently to ensure detail rows are written into the native NT sheet.
+                    var map=ExcelService.GetSheetMap(z);var doc=ExcelService.LoadSheetXml(z,map[spec.Sheet]);var strings=ExcelService.LoadSharedStrings(z);
+                    int occurrences=0;foreach(XmlElement row in doc.GetElementsByTagName("row",doc.DocumentElement.NamespaceURI))if(ExcelService.GetCellString(doc,strings,"A"+row.GetAttribute("r"))=="Bù chênh lệch & bổ sung <tháng>") {
+                        occurrences++;string r=row.GetAttribute("r");Check(book.Evaluate(spec.Sheet,"E"+r)==1200000 && book.Evaluate(spec.Sheet,"I"+r)==1200000,"Native NT row includes separately recalculating supplement amount");
+                    }
+                    Check(occurrences==1,"Repeated save replaces detail block without duplication: "+spec.Code+" pass="+pass+" count="+occurrences+" contains="+doc.InnerText.Contains("Bù chênh"));
+                }
+            }
+            all=ExcelService.LoadWorkshopsFromExcel(file);foreach(var w in all) {
+                Check(w.ListNhanVien.Count==counts[w.MaPX] && w.ListNhanVien.Count(e=>e.SDB=="99001")==1,"New people survive repeated save/reload without duplication");
+                Check(w.ListNhanVien.First(e=>e.SDB=="99001").CongSP==26 && w.ManagementAdjustments.Count==2 && w.DieuChinhLuongQL==850000,"New person's attendance and adjustment reasons survive reload");
+            }
+        }
+        foreach(var w in all)ManagementPayroll.SetAdjustments(w,new[]{new ManagementAdjustment {Reason="Đối trừ",Addition=500000,Deduction=500000}});
+        ExcelService.SaveWorkshopsToExcel(file,all);all=ExcelService.LoadWorkshopsFromExcel(file);foreach(var w in all)Check(w.ManagementAdjustments.Count==1 && w.DieuChinhLuongQL==0,"Equal amounts retain detailed zero-net adjustment");
+        foreach(var w in all)ManagementPayroll.SetAdjustments(w,new ManagementAdjustment[0]);
+        ExcelService.SaveWorkshopsToExcel(file,all);all=ExcelService.LoadWorkshopsFromExcel(file);foreach(var w in all)Check(w.ManagementAdjustments.Count==0 && w.DieuChinhLuongQL==0,"Deleting final adjustment does not restore stale legacy value");
+        using(var z=ZipFile.OpenRead(file)) {var map=ExcelService.GetSheetMap(z);foreach(var spec in Specs)Check(!ExcelService.LoadSheetXml(z,map[spec.Sheet]).InnerText.Contains("CHI TIẾT BỔ SUNG / GIẢM TRỪ"),"Clearing adjustments removes old native detail rows");}
+    }
     static void Edit(DataGridView grid,int row,string value){grid.Rows[row].Cells[2].Value=value;typeof(DataGridView).GetMethod("OnCellEndEdit",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(grid,new object[]{new DataGridViewCellEventArgs(2,row)});Application.DoEvents();}
     static void Ui(string file)
     {
@@ -77,6 +124,27 @@ class ManagementAcceptanceTests
             using(var dialog=new ManagementPayrollForm(w)){dialog.Show();Application.DoEvents();typeof(ManagementPayrollForm).GetMethod("Preview",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(dialog,new object[]{true});}
             Check(w.LuongSPQL==1500000 && w.LuongCheDoQL!=333333 && w.DieuChinhLuongQL==150000,"Applying personal detail intentionally replaces the separate aggregate while keeping the common adjustment");
             ExcelService.SaveWorkshopsToExcel(file,all);Verify(file,all,false,"TK");
+            using(var dialog=new ManagementPayrollForm(w)) {
+                dialog.Show();Application.DoEvents();
+                var changes=(DataGridView)typeof(ManagementPayrollForm).GetField("adjustments",BindingFlags.Instance|BindingFlags.NonPublic).GetValue(dialog);
+                Check(changes.Rows.Count==2 && Convert.ToDouble(changes.Rows[0].Cells[1].Value)==150000,"Legacy signed adjustment migrates to a reason row without losing money");
+                changes.Rows.Clear();changes.Rows.Add("Bổ sung UI",1000000d,0d);changes.Rows.Add("Giảm UI",0d,200000d);
+                typeof(ManagementPayrollForm).GetMethod("Preview",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(dialog,new object[]{false});
+                Check(w.DieuChinhLuongQL==150000,"Preview of detail adjustments leaves original untouched");
+                int old=w.ListNhanVien.Count;var timer=new System.Windows.Forms.Timer {Interval=100};
+                timer.Tick+=delegate {
+                    foreach(Form form in Application.OpenForms)if(form is EmployeeEditorForm) {
+                        foreach(var entry in new[]{new[]{"code","99100"},new[]{"name","Quản lý UI giả"},new[]{"team","Quản lý PX"},new[]{"role","TK"}})
+                            ((TextBox)typeof(EmployeeEditorForm).GetField(entry[0],BindingFlags.Instance|BindingFlags.NonPublic).GetValue(form)).Text=entry[1];
+                        timer.Stop();((Button)form.AcceptButton).PerformClick();break;
+                    }
+                };
+                timer.Start();foreach(Control top in dialog.Controls)if(top is FlowLayoutPanel)foreach(Control c in top.Controls)if(c is Button && c.Text=="+ Thêm người quản lý")((Button)c).PerformClick();timer.Dispose();
+                Check(w.ListNhanVien.Count==old,"Adding management person remains draft until Apply");
+                typeof(ManagementPayrollForm).GetMethod("Preview",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(dialog,new object[]{true});
+                Check(w.DieuChinhLuongQL==800000 && w.ManagementAdjustments.Count==2 && w.ListNhanVien.Count==old+1 && w.ListNhanVien.Last().SDB=="99100","Apply commits separate reason amounts and newly added management person");
+            }
+            ExcelService.SaveWorkshopsToExcel(file,all);Verify(file,all,false,"TK");
 
         }
     }
@@ -85,7 +153,8 @@ class ManagementAcceptanceTests
         string original=Hash(source),file=Path.Combine(dir,"source-copy.xlsx");File.Copy(source,file);var all=ExcelService.LoadWorkshopsFromExcel(file);int index=0;
         foreach(var w in all){w.TinhQuyQLTuSanLuong=false;w.LuongSPQL=w.CongQL>0?1000000+index:0;w.DieuChinhLuongQL=4000;foreach(var e in w.ListNhanVien)if(e.LaQuanLy){e.HeSoCoDinh=2;e.XepLoai="A";e.LuongLamLe=100000+index;e.PhuCapTien=20000;e.QuanLyTinhMoi=true;}ManagementPayroll.Recalculate(w);index++;}
         for(int i=0;i<2;i++){ExcelService.SaveWorkshopsToExcel(file,all);Verify(file,all,true,null,false);var next=ExcelService.LoadWorkshopsFromExcel(file);foreach(var w in all)Check(next.First(x=>x.MaPX==w.MaPX).TongLuongQL==w.TongLuongQL,"Actual template management total stable after reload: "+w.MaPX);all=next;}
+        Changes(file,dir);
         Check(Hash(source)==original,"Original user workbook untouched; source-copy monetary inputs are synthetic test values only");
     }
-    [STAThread] static int Main(string[] args){string dir=Path.Combine(Path.GetTempPath(),"management-acceptance-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(dir);try{string f=Path.Combine(dir,"test.xlsx");Fixture(f);Applied(f);if(args.Length>0 && args[0]!="--ui")Source(args[0],dir);if(args.Length>0 && args[0]=="--ui"){File.Delete(f);Fixture(f);Application.EnableVisualStyles();Ui(f);}Check(Directory.GetFiles(dir,".emga-save-*.tmp").Length==0,"No staged files remain");}finally{Directory.Delete(dir,true);}Console.WriteLine("PASS: "+checks+" management acceptance/recalculation checks.");return 0;}
+    [STAThread] static int Main(string[] args){string dir=Path.Combine(Path.GetTempPath(),"management-acceptance-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(dir);try{string f=Path.Combine(dir,"test.xlsx");Fixture(f);Applied(f);Changes(f,dir);if(args.Length>0 && args[0]!="--ui")Source(args[0],dir);if(args.Length>0 && args[0]=="--ui"){File.Delete(f);Fixture(f);Application.EnableVisualStyles();Ui(f);}Check(Directory.GetFiles(dir,".emga-save-*.tmp").Length==0,"No staged files remain");}finally{Directory.Delete(dir,true);}Console.WriteLine("PASS: "+checks+" management acceptance/recalculation checks.");return 0;}
 }

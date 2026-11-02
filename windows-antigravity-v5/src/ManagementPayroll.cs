@@ -3,6 +3,13 @@ using System.Collections.Generic;
 
 namespace CiscoLDTLApp
 {
+    public class ManagementAdjustment
+    {
+        public string Reason { get; set; }
+        public double Addition { get; set; }
+        public double Deduction { get; set; }
+    }
+
     // Phân bổ quỹ SP đã được duyệt; không suy diễn công thức quỹ từ Excel lỗi/liên kết ngoài.
     public static class ManagementPayroll
     {
@@ -12,7 +19,20 @@ namespace CiscoLDTLApp
         public static bool IsApplied(WorkshopData ws)
         {if(ws.TinhQuyQLTuSanLuong)return true;foreach(var e in ws.ListNhanVien)if(e.LaQuanLy && e.QuanLyTinhMoi)return true;return false;}
         internal static bool OwnsSummary(WorkshopData ws)
-        {return IsApplied(ws) || ws.ManagementSummaryEdited || ws.ManualManagementFund || ws.ManualManagementOther.HasValue || ws.DieuChinhLuongQL!=0;}
+        {return IsApplied(ws) || ws.ManagementSummaryEdited || ws.ManualManagementFund || ws.ManualManagementOther.HasValue || ws.DieuChinhLuongQL!=0 || ws.ManagementAdjustmentsEdited;}
+
+        public static void SetAdjustments(WorkshopData ws, IEnumerable<ManagementAdjustment> items)
+        {
+            var copy=new List<ManagementAdjustment>(); double net=0;
+            foreach(var item in items) {
+                if(item.Addition<0 || item.Deduction<0 || double.IsNaN(item.Addition) || double.IsNaN(item.Deduction) || double.IsInfinity(item.Addition) || double.IsInfinity(item.Deduction)) throw new ArgumentException("Bổ sung và giảm trừ phải là số không âm, hữu hạn.");
+                if(item.Addition==0 && item.Deduction==0)continue;
+                if(string.IsNullOrWhiteSpace(item.Reason))throw new ArgumentException("Vui lòng nhập nguyên nhân cho từng khoản bổ sung / giảm trừ.");
+                copy.Add(new ManagementAdjustment { Reason=item.Reason.Trim(), Addition=item.Addition, Deduction=item.Deduction }); net+=item.Addition-item.Deduction;
+            }
+            if(double.IsNaN(net)||double.IsInfinity(net))throw new ArgumentException("Tổng điều chỉnh vượt giới hạn.");
+            ws.ManagementAdjustments=copy;ws.ManagementAdjustmentsEdited=true;ws.ManagementSummaryEdited=true;ws.DieuChinhLuongQL=net;
+        }
 
         public static double RoundMoney(double value, double unit)
         { return Math.Round(value / unit, 0, MidpointRounding.AwayFromZero) * unit; }
